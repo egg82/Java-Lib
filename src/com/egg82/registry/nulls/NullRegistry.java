@@ -61,6 +61,9 @@ public class NullRegistry implements IRegistry {
     public String[] registryNames() {
         return new String[0];
     }
+    public boolean contains(String type) {
+    	return false;
+    }
     
     //private
     

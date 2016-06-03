@@ -59,11 +59,11 @@ public class Registry implements IRegistry {
         
         if (data == null) {
         	registry.remove(type);
+        	dispatch(event, ImmutableMap.of("name", type, "value", new Object()));
         } else {
         	registry.put(type, data);
+        	dispatch(event, ImmutableMap.of("name", type, "value", data));
         }
-        
-        dispatch(event, ImmutableMap.of("name", type, "value", data));
     }
     public Object getRegister(String type) {
         return registry.get(type);
@@ -79,6 +79,9 @@ public class Registry implements IRegistry {
     public String[] registryNames() {
         Set<String> keys = registry.keySet();
         return keys.toArray(new String[keys.size()]);
+    }
+    public boolean contains(String type) {
+    	return registry.containsKey(type);
     }
     
     //private

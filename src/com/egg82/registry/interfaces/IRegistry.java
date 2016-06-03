@@ -37,4 +37,5 @@ public interface IRegistry {
     void reset();
     
     String[] registryNames();
+    boolean contains(String type);
 }
