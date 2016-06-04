@@ -24,6 +24,8 @@ package com.egg82.utils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 
 /**
  *
@@ -72,17 +74,19 @@ public class Util {
     
     public static Object[] getStaticFields(Class<?> c) {
     	Field[] fields = c.getDeclaredFields();
-    	Object[] returns = new Object[fields.length];
+    	ArrayList<Object> returns = new ArrayList<Object>();
     	
     	for (int i = 0; i < fields.length; i++) {
-    		try {
-				returns[i] = fields[i].get(null);
-			} catch (Exception e) {
-				System.out.println(e.getMessage());
-			}
+    		if (!Modifier.isPrivate(fields[i].getModifiers())) {
+    			try {
+    				returns.add(fields[i].get(null));
+    			} catch (Exception e) {
+    				System.out.println(e.getMessage());
+    			}
+    		}
     	}
     	
-    	return returns;
+    	return returns.toArray();
     }
     
     //private
