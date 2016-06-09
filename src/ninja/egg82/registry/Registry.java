@@ -22,8 +22,6 @@
 
 package ninja.egg82.registry;
 
-import com.google.common.collect.ImmutableMap;
-
 import ninja.egg82.events.registry.RegistryEvent;
 import ninja.egg82.patterns.Observer;
 import ninja.egg82.registry.interfaces.IRegistry;
@@ -59,13 +57,18 @@ public class Registry implements IRegistry {
     public void setRegister(String type, Object data) {
         String event = (registry.containsKey(type)) ? ((data != null) ? RegistryEvent.VALUE_CHANGED : RegistryEvent.VALUE_REMOVED) : RegistryEvent.VALUE_ADDED;
         
+        HashMap<String, Object> map = new HashMap<String, Object>();
+        map.put("name", type);
+        
         if (data == null) {
         	registry.remove(type);
-        	dispatch(event, ImmutableMap.of("name", type, "value", new Object()));
+        	map.put("value", null);
         } else {
         	registry.put(type, data);
-        	dispatch(event, ImmutableMap.of("name", type, "value", data));
+        	map.put("value", data);
         }
+        
+        dispatch(event, map);
     }
     public Object getRegister(String type) {
         return registry.get(type);
