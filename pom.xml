@@ -42,6 +42,11 @@
       <artifactId>commons-lang3</artifactId>
       <version>3.4</version>
     </dependency>
+    <dependency>
+      <groupId>org.reflections</groupId>
+      <artifactId>reflections</artifactId>
+      <version>0.9.10</version>
+    </dependency>
   </dependencies>
   <description>partial port of https://github.com/egg82/AS3-Framework-FP-Starling</description>
   <url>https://egg82.ninja</url>
