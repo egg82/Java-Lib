@@ -22,6 +22,9 @@
 
 package ninja.egg82.registry.interfaces;
 
+import java.util.function.BiFunction;
+import java.util.function.Function;
+
 /**
  *
  * @author egg82
@@ -38,4 +41,6 @@ public interface IRegistry {
     
     String[] registryNames();
     boolean contains(String type);
+    void computeIfPresent(String type,  BiFunction<? super String, ? super Object, ? extends Object> func);
+    void computeIfAbsent(String type,  Function<? super String, ? super Object> func);
 }

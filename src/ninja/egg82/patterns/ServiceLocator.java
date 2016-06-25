@@ -32,57 +32,56 @@ import ninja.egg82.utils.Util;
  */
 
 public class ServiceLocator {
-    //vars
-    private static HashMap<String, Class<?>> services = new HashMap<String, Class<?>>();
-    private static HashMap<String, Object> initializedServices = new HashMap<String, Object>();
-    
-    //constructor
-    public ServiceLocator() {
-        
-    }
-    
-    //events
-    
-    //public
-    public static Object getService(String type) {
-        if (!initializedServices.containsKey(type) && services.containsKey(type)) {
-            initializeService(type, services.get(type));
-        }
-        
-        if (initializedServices.containsKey(type)) {
-            return initializedServices.get(type);
-        }
-        
-        return null;
-    }
-    public static void provideService(String type, Class<?> service) {
-        provideService(type, service, true);
-    }
-    public static void provideService(String type, Class<?> service, Boolean lazy) {
-        if (initializedServices.containsKey(type)) {
-            Object serviceObj = initializedServices.get(type);
-            
-            Util.invokeMethod("destroy", serviceObj);
-            Util.invokeMethod("dispose", serviceObj);
-        }
-        
-        services.put(type, service);
-        
-        if (!lazy) {
-            initializeService(type, service);
-        }
-    }
-    
-    //private
-    private static void initializeService(String type, Class<?> service) {
-        Object instance = null;
-        
-        try {
-            instance = service.newInstance();
-        } catch (Exception ex) {
-            System.out.println(ex.getMessage());
-        }
-        
-        initializedServices.put(type, instance);
-    }
+	//vars
+	private static HashMap<String, Class<?>> services = new HashMap<String, Class<?>>();
+	private static HashMap<String, Object> initializedServices = new HashMap<String, Object>();
+	
+	//constructor
+	public ServiceLocator() {
+		
+	}
+	
+	//events
+	
+	//public
+	public static Object getService(String type) {
+		return initializedServices.computeIfAbsent(type, (k) -> {
+			return initializeService(type, services.get(k));
+		});
+	}
+	public static void provideService(String type, Class<?> service) {
+		provideService(type, service, true);
+	}
+	public static void provideService(String type, Class<?> service, Boolean lazy) {
+		services.put(type, service);
+		initializedServices.computeIfPresent(type, (k,v) -> {
+			Util.invokeMethod("destroy", v);
+			Util.invokeMethod("dispose", v);
+			return null;
+		});
+		
+		if (!lazy) {
+		    initializeService(type, service);
+		}
+	}
+	public static boolean containsService(String type) {
+		return services.containsKey(type);
+	}
+	public static boolean serviceIsInitialized(String type) {
+		return initializedServices.containsKey(type);
+	}
+	
+	//private
+	private static Object initializeService(String type, Class<?> service) {
+		Object instance = null;
+		
+		try {
+			instance = service.newInstance();
+		} catch (Exception ex) {
+			return null;
+		}
+		
+		initializedServices.put(type, instance);
+		return instance;
+	}
 }

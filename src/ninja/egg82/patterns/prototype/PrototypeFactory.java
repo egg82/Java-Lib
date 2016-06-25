@@ -33,28 +33,30 @@ import ninja.egg82.patterns.prototype.interfaces.IPrototypeFactory;
  */
 
 public class PrototypeFactory implements IPrototypeFactory {
-    //vars
-    private HashMap<String, IPrototype> instances = new HashMap<String, IPrototype>();
-    
-    //constructor
-    public PrototypeFactory() {
-        
-    }
-    
-    //events
-    
-    //public
-    public void addPrototype(String name, IPrototype prototype) {
-        if (prototype == null) {
-            throw new Error("prototype cannot be null");
-        }
-        
-        instances.put(name, prototype);
-    }
-    public IPrototype createInstance(String name) {
-        return (instances.containsKey(name)) ? (instances.get(name).clone()) : null;
-    }
-    
-    //private
-    
+	//vars
+	private HashMap<String, IPrototype> instances = new HashMap<String, IPrototype>();
+	
+	//constructor
+	public PrototypeFactory() {
+		
+	}
+	
+	//events
+	
+	//public
+	public void addPrototype(String name, IPrototype prototype) {
+		if (prototype == null) {
+			throw new Error("prototype cannot be null");
+		}
+		
+		instances.put(name, prototype);
+	}
+	public IPrototype createInstance(String name) {
+		return instances.computeIfPresent(name, (k,v) -> {
+			return v.clone();
+		});
+	}
+	
+	//private
+
 }

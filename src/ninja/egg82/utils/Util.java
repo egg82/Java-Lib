@@ -123,6 +123,14 @@ public class Util {
 		return list;
 	}
 	
+	public static Class<?> getClassFromName(String name) {
+		try {
+			return Class.forName(name);
+		} catch (Exception ex) {
+			return null;
+		}
+	}
+	
 	//private
 
 }

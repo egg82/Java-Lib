@@ -29,6 +29,8 @@ import ninja.egg82.registry.interfaces.IRegistry;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 /**
  *
@@ -36,61 +38,67 @@ import java.util.Set;
  */
 
 public class Registry implements IRegistry {
-    //vars
-    public static final ArrayList<Observer> OBSERVERS = new ArrayList<Observer>();
-    
-    protected Boolean initialized = false;
-    protected HashMap<String, Object> registry = new HashMap<String, Object>();
-    
-    //constructor
-    public Registry() {
-        
-    }
-    
-    //events
-    
-    //public
-    public void initialize() {
-        initialized = true;
-    }
-    
-    public void setRegister(String type, Object data) {
-        String event = (registry.containsKey(type)) ? ((data != null) ? RegistryEvent.VALUE_CHANGED : RegistryEvent.VALUE_REMOVED) : RegistryEvent.VALUE_ADDED;
-        
-        HashMap<String, Object> map = new HashMap<String, Object>();
-        map.put("name", type);
-        
-        if (data == null) {
-        	registry.remove(type);
-        	map.put("value", null);
-        } else {
-        	registry.put(type, data);
-        	map.put("value", data);
-        }
-        
-        dispatch(event, map);
-    }
-    public Object getRegister(String type) {
-        return registry.get(type);
-    }
-    
-    public void clear() {
-        registry.clear();
-    }
-    public void reset() {
-        
-    }
-    
-    public String[] registryNames() {
-        Set<String> keys = registry.keySet();
-        return keys.toArray(new String[keys.size()]);
-    }
-    public boolean contains(String type) {
-    	return registry.containsKey(type);
-    }
-    
-    //private
-    protected void dispatch(String event, Object data) {
-        Observer.dispatch(OBSERVERS, this, event, data);
-    }
+	//vars
+	public static final ArrayList<Observer> OBSERVERS = new ArrayList<Observer>();
+	
+	protected Boolean initialized = false;
+	protected HashMap<String, Object> registry = new HashMap<String, Object>();
+	
+	//constructor
+	public Registry() {
+		
+	}
+	
+	//events
+	
+	//public
+	public void initialize() {
+		initialized = true;
+	}
+	
+	public void setRegister(String type, Object data) {
+		String event = (registry.containsKey(type)) ? ((data != null) ? RegistryEvent.VALUE_CHANGED : RegistryEvent.VALUE_REMOVED) : RegistryEvent.VALUE_ADDED;
+		
+		HashMap<String, Object> map = new HashMap<String, Object>();
+		map.put("name", type);
+		
+		if (data == null) {
+			registry.remove(type);
+			map.put("value", null);
+		} else {
+			registry.put(type, data);
+			map.put("value", data);
+		}
+		
+		dispatch(event, map);
+	}
+	public Object getRegister(String type) {
+		return registry.get(type);
+	}
+	
+	public void clear() {
+		registry.clear();
+	}
+	public void reset() {
+		
+	}
+	
+	public String[] registryNames() {
+		Set<String> keys = registry.keySet();
+		return keys.toArray(new String[keys.size()]);
+	}
+	public boolean contains(String type) {
+		return registry.containsKey(type);
+	}
+	public void computeIfPresent(String type,  BiFunction<? super String, ? super Object, ? extends Object> func) {
+		registry.computeIfPresent(type, func);
+	}
+	public void computeIfAbsent(String type,  Function<? super String, ? super Object> func) {
+		registry.computeIfAbsent(type, func);
+	}
+	
+	//private
+	protected void dispatch(String event, Object data) {
+		Observer.dispatch(OBSERVERS, this, event, data);
+	}
 }

@@ -56,7 +56,7 @@ public class FSM implements IFSM {
 			try {
 				states.put(name, state.getDeclaredConstructor(IFSM.class).newInstance(this));
 			} catch (Exception ex) {
-				System.out.println(ex.getMessage());
+				
 			}
 		}
 	}

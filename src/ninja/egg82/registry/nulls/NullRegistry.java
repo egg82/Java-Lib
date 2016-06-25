@@ -22,6 +22,9 @@
 
 package ninja.egg82.registry.nulls;
 
+import java.util.function.BiFunction;
+import java.util.function.Function;
+
 import ninja.egg82.registry.interfaces.IRegistry;
 
 /**
@@ -63,6 +66,12 @@ public class NullRegistry implements IRegistry {
     }
     public boolean contains(String type) {
     	return false;
+    }
+    public void computeIfPresent(String type,  BiFunction<? super String, ? super Object, ? extends Object> func) {
+    	
+    }
+    public void computeIfAbsent(String type,  Function<? super String, ? super Object> func) {
+    	
     }
     
     //private

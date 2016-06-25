@@ -22,10 +22,12 @@
 
 package ninja.egg82.startup;
 
+import ninja.egg82.enums.RegType;
 import ninja.egg82.enums.ServiceType;
 import ninja.egg82.patterns.ServiceLocator;
 import ninja.egg82.patterns.prototype.PrototypeFactory;
 import ninja.egg82.registry.Registry;
+import ninja.egg82.registry.interfaces.IRegistry;
 import ninja.egg82.utils.SettingsLoader;
 
 /**
@@ -47,8 +49,16 @@ public class Start {
     public static void init() {
         ServiceLocator.provideService(ServiceType.SETTINGS_LOADER, SettingsLoader.class);
         ServiceLocator.provideService(ServiceType.OPTIONS_REGISTRY, Registry.class, false);
-        ServiceLocator.provideService(ServiceType.INIT_REGISTRY, Registry.class);
+        ServiceLocator.provideService(ServiceType.INIT_REGISTRY, Registry.class, false);
         ServiceLocator.provideService(ServiceType.PROTOTYPE_FACTORY, PrototypeFactory.class);
+        
+        IRegistry initReg = (IRegistry) ServiceLocator.getService(ServiceType.INIT_REGISTRY);
+        try {
+			initReg.setRegister(RegType.JAVA_VERSION, System.getProperty("java.version"));
+			System.out.println("Plugin version: " + System.getProperty("java.version"));
+		} catch (Exception ex) {
+			
+		}
         
         /*Path currentRelativePath = Paths.get("");
         String s = currentRelativePath.toAbsolutePath().toString();
