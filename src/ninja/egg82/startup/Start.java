@@ -14,6 +14,7 @@ public class Start {
     //public
     public static void init() {
         ServiceLocator.provideService(PrototypeFactory.class);
+        ServiceLocator.provideService(InitRegistry.class, false);
     }
     
     //private
