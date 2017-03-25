@@ -64,6 +64,10 @@
                   <pattern>gnu.trove</pattern>
                   <shadedPattern>ninja.egg82.lib.gnu.trove</shadedPattern>
                 </relocation>
+                <relocation>
+                  <pattern>org.bouncycastle</pattern>
+                  <shadedPattern>ninja.egg82.lib.org.bouncycastle</shadedPattern>
+                </relocation>
               </relocations>
             </configuration>
           </execution>
@@ -105,6 +109,11 @@
       <groupId>net.sf.trove4j</groupId>
       <artifactId>trove4j</artifactId>
       <version>3.0.3</version>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <version>1.56</version>
     </dependency>
   </dependencies>
   <description>partial port of https://github.com/egg82/Egg82LibEnhanced</description>
