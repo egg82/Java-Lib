@@ -1,87 +1,120 @@
-/*
- * Copyright (c) egg82 (Alexander Mason) 2016
- * 
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- * 
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
-*/
-
 package ninja.egg82.patterns;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 
-import ninja.egg82.utils.Util;
-
-/**
- *
- * @author egg82
- */
+import gnu.trove.map.hash.THashMap;
+import ninja.egg82.utils.ReflectUtil;
 
 public class ServiceLocator {
 	//vars
-	private static HashMap<String, Class<?>> services = new HashMap<String, Class<?>>();
-	private static HashMap<String, Object> initializedServices = new HashMap<String, Object>();
+	private static ArrayList<Class<?>> services = new ArrayList<Class<?>>();
+	private static THashMap<Class<?>, Object> initializedServices = new THashMap<Class<?>, Object>();
 	
 	//constructor
 	public ServiceLocator() {
 		
 	}
 	
-	//events
-	
 	//public
-	public static Object getService(String type) {
-		return initializedServices.computeIfAbsent(type, (k) -> {
-			return initializeService(type, services.get(k));
-		});
-	}
-	public static void provideService(String type, Class<?> service) {
-		provideService(type, service, true);
-	}
-	public static void provideService(String type, Class<?> service, Boolean lazy) {
-		services.put(type, service);
-		initializedServices.computeIfPresent(type, (k,v) -> {
-			Util.invokeMethod("destroy", v);
-			Util.invokeMethod("dispose", v);
-			return null;
-		});
+	public synchronized static Object getService(Class<?> clazz) {
+		if (clazz == null) {
+			throw new IllegalArgumentException("clazz cannot be null.");
+		}
 		
-		if (!lazy) {
-		    initializeService(type, service);
+		Object result = initializedServices.get(clazz);
+		int index = services.indexOf(clazz);
+		
+		if (result == null && index > -1) {
+			result = initializeService(services.get(index));
+			initializedServices.put(clazz, result);
+		}
+		
+		if (result == null) {
+			for (int i = 0; i < services.size(); i++) {
+				Class<?> c = services.get(i);
+				if (ReflectUtil.doesExtend(c, clazz)) {
+					result = initializedServices.get(c);
+					if (result == null) {
+						result = initializeService(c);
+						initializedServices.put(clazz, result);
+					}
+					break;
+				}
+			}
+		}
+		
+		return result;
+	}
+	public synchronized static void provideService(Class<?> clazz) {
+		provideService(clazz, true);
+	}
+	public synchronized static void provideService(Class<?> clazz, boolean lazyInitialize) {
+		if (clazz == null) {
+			throw new IllegalArgumentException("clazz cannot be null.");
+		}
+		
+		initializedServices.remove(clazz);
+		
+		int index = services.indexOf(clazz);
+		if (index > -1) {
+			services.set(index, clazz);
+		} else {
+			services.add(clazz);
+		}
+		
+		if (!lazyInitialize) {
+			initializedServices.put(clazz, initializeService(clazz));
 		}
 	}
-	public static boolean containsService(String type) {
-		return services.containsKey(type);
+	public synchronized static void removeService(Class<?> clazz) {
+		if (clazz == null) {
+			throw new IllegalArgumentException("clazz cannot be null.");
+		}
+		
+		Object result = initializedServices.get(clazz);
+		if (result != null) {
+			initializedServices.remove(clazz);
+		}
+		services.remove(clazz);
+		
+		if (result == null) {
+			for (int i = 0; i < services.size(); i++) {
+				Class<?> c = services.get(i);
+				if (ReflectUtil.doesExtend(c, clazz)) {
+					result = initializedServices.get(c);
+					if (result != null) {
+						initializedServices.remove(clazz);
+					}
+					services.remove(i);
+					return;
+				}
+			}
+		}
 	}
-	public static boolean serviceIsInitialized(String type) {
-		return initializedServices.containsKey(type);
+	
+	public static synchronized boolean hasService(Class<?> clazz) {
+		if (clazz == null) {
+			return false;
+		}
+		return services.contains(clazz);
+	}
+	public static synchronized boolean serviceIsInitialized(Class<?> clazz) {
+		if (clazz == null) {
+			return false;
+		}
+		return initializedServices.containsKey(clazz);
 	}
 	
 	//private
-	private static Object initializeService(String type, Class<?> service) {
+	private static Object initializeService(Class<?> service) {
 		Object instance = null;
 		
 		try {
 			instance = service.newInstance();
 		} catch (Exception ex) {
-			return null;
+			throw new RuntimeException("Service cannot be initialized.");
 		}
 		
-		initializedServices.put(type, instance);
 		return instance;
 	}
 }

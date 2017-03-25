@@ -1,4 +1,4 @@
-package ninja.egg82.patterns.command;
+package ninja.egg82.patterns;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -6,15 +6,12 @@ import java.util.ArrayList;
 
 import javax.swing.Timer;
 
-import ninja.egg82.events.patterns.command.CommandEvent;
-import ninja.egg82.patterns.Observer;
-
-public class Command {
+public abstract class Command {
 	//vars
 	public static final ArrayList<Observer> OBSERVERS = new ArrayList<Observer>();
 	
 	private Timer timer = null;
-	protected Object data = null;
+	private long startTime = 0L;
 	
 	//constructor
 	public Command() {
@@ -22,38 +19,35 @@ public class Command {
 	}
 	public Command(int delay) {
 		if (delay <= 0) {
+			throw new IllegalArgumentException("delay cann be less than zero.");
+		} else if (delay == 0) {
 			return;
+		} else {
+			timer = new Timer(delay, onTimer);
+			timer.setRepeats(false);
 		}
-		
-		timer = new Timer(delay, onTimer);
-		timer.setRepeats(false);
 	}
 	
 	//public
 	public void start() {
 		if (timer != null) {
+			startTime = System.currentTimeMillis();
 			timer.start();
-			return;
+		} else {
+			new Thread(new Runnable() {
+				public void run() {
+					onExecute(0L);
+				}
+			}).start();
 		}
-		execute();
-	}
-	public void startSerialized(Object data) {
-		this.data = data;
-		if (timer != null) {
-			timer.start();
-			return;
-		}
-		execute();
 	}
 	
 	//private
-	protected void execute() {
-		dispatch(CommandEvent.COMPLETE, null);
-	}
+	protected abstract void onExecute(long elapsedMilliseconds);
+	
 	private ActionListener onTimer = new ActionListener() {
 		public void actionPerformed(ActionEvent e) {
-			dispatch(CommandEvent.TIMER, null);
-			execute();
+			onExecute(System.currentTimeMillis() - startTime);
 		}
 	};
 	protected void dispatch(String event, Object data) {
