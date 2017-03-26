@@ -212,7 +212,7 @@ public class CryptoUtil implements ICryptoUtil {
 		try {
 			length2 = cipher.doFinal(buffer, length1);
 		} catch (Exception ex) {
-			throw new RuntimeException(ex);
+			throw new RuntimeException("Cannot crypt data using specified cipher.", ex);
 		}
 		int length = length1 + length2;
 		byte[] result = new byte[length];

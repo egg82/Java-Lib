@@ -23,19 +23,19 @@ public class Registry implements IRegistry {
 			try {
 				data = type.cast(data);
 			} catch (Exception ex) {
-				throw new RuntimeException("data type cannot be converted to the type specified.");
+				throw new RuntimeException("data type cannot be converted to the type specified.", ex);
 			}
 		}
 		
 		if (data == null) {
 			registry.remove(name);
-			keyCache = (String[]) registry.keySet().toArray();
+			keyCache = registry.keySet().toArray(new String[0]);
 		} else {
 			if (registry.containsKey(name)) {
 				registry.put(name, Pair.of(type, data));
 			} else {
 				registry.put(name, Pair.of(type, data));
-				keyCache = (String[]) registry.keySet().toArray();
+				keyCache = registry.keySet().toArray(new String[0]);
 			}
 		}
 	}

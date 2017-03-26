@@ -49,7 +49,7 @@ public class SettingsUtil {
         try {
             json = new JSONObject(str);
         } catch (Exception ex) {
-            
+            throw new RuntimeException("Cannot create JSON object.", ex);
         }
         
         if (json != null) {

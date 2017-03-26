@@ -112,7 +112,7 @@ public class ServiceLocator {
 		try {
 			instance = service.newInstance();
 		} catch (Exception ex) {
-			throw new RuntimeException("Service cannot be initialized.");
+			throw new RuntimeException("Service cannot be initialized.", ex);
 		}
 		
 		return instance;

@@ -22,7 +22,7 @@ public class FiniteStateMachine {
 		try {
 			ns = state.getDeclaredConstructor(FiniteStateMachine.class).newInstance(this);
 		} catch (Exception ex) {
-			throw new RuntimeException("Cannot create state.");
+			throw new RuntimeException("Cannot create state.", ex);
 		}
 		
 		FiniteState oldState = states.get(state);

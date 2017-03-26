@@ -34,14 +34,14 @@ public class ReflectUtil {
 	    try {
 	        find = obj.getClass().getMethod(method, (Class<?>[]) null);
 	    } catch (Exception ex) {
-	        System.out.println(ex.getMessage());
+	        
 	    }
 	    
 	    if (find != null) {
 	        try {
 	            find.invoke(obj, (Object[]) null);
-	        }catch (Exception ex) {
-	            System.out.println(ex.getMessage());
+	        } catch (Exception ex) {
+	            
 	        }
 	    }
 	}
@@ -65,8 +65,8 @@ public class ReflectUtil {
 			if (!Modifier.isPrivate(fields[i].getModifiers())) {
 				try {
 					returns.add(fields[i].get(null));
-				} catch (Exception e) {
-					System.out.println(e.getMessage());
+				} catch (Exception ex) {
+					
 				}
 			}
 		}
