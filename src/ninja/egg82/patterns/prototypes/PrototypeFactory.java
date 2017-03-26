@@ -1,10 +1,11 @@
 package ninja.egg82.patterns.prototypes;
 
-import gnu.trove.map.hash.THashMap;
+import com.koloboke.collect.map.hash.HashObjObjMap;
+import com.koloboke.collect.map.hash.HashObjObjMaps;
 
 public class PrototypeFactory implements IPrototypeFactory {
 	//vars
-	private THashMap<String, IPrototype> masterInstances = new THashMap<String, IPrototype>();
+	private HashObjObjMap<String, IPrototype> masterInstances = HashObjObjMaps.<String, IPrototype> newMutableMap();
 	
 	//constructor
 	public PrototypeFactory() {

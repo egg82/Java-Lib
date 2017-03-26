@@ -1,7 +1,5 @@
 package ninja.egg82.utils;
 
-import gnu.trove.map.hash.THashMap;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -9,6 +7,9 @@ import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Set;
+
+import com.koloboke.collect.map.hash.HashObjObjMap;
+import com.koloboke.collect.map.hash.HashObjObjMaps;
 
 public class FileUtil {
     //vars
@@ -18,8 +19,8 @@ public class FileUtil {
 	public static final String CURRENT_DIRECTORY = System.getProperty("user.dir");
 	public static final char DIRECTORY_SEPARATOR_CHAR = File.separatorChar;
 	
-	private static THashMap<String, FileInputStream> inStreams = new THashMap<String, FileInputStream>();
-	private static THashMap<String, FileOutputStream> outStreams = new THashMap<String, FileOutputStream>();
+	private static HashObjObjMap<String, FileInputStream> inStreams = HashObjObjMaps.<String, FileInputStream> newMutableMap();
+	private static HashObjObjMap<String, FileOutputStream> outStreams = HashObjObjMaps.<String, FileOutputStream> newMutableMap();
     
     //constructor
     public FileUtil() {

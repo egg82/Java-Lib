@@ -2,13 +2,15 @@ package ninja.egg82.patterns;
 
 import java.util.ArrayList;
 
-import gnu.trove.map.hash.THashMap;
+import com.koloboke.collect.map.hash.HashObjObjMap;
+import com.koloboke.collect.map.hash.HashObjObjMaps;
+
 import ninja.egg82.utils.ReflectUtil;
 
 public class ServiceLocator {
 	//vars
 	private static ArrayList<Class<?>> services = new ArrayList<Class<?>>();
-	private static THashMap<Class<?>, Object> initializedServices = new THashMap<Class<?>, Object>();
+	private static HashObjObjMap<Class<?>, Object> initializedServices = HashObjObjMaps.<Class<?>, Object> newMutableMap();
 	
 	//constructor
 	public ServiceLocator() {

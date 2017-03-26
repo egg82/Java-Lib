@@ -2,12 +2,13 @@ package ninja.egg82.patterns;
 
 import org.apache.commons.lang3.tuple.Pair;
 
-import gnu.trove.map.hash.THashMap;
+import com.koloboke.collect.map.hash.HashObjObjMap;
+import com.koloboke.collect.map.hash.HashObjObjMaps;
 
 public class Registry implements IRegistry {
 	//vars
 	private String[] keyCache = new String[0];
-	private THashMap<String, Pair<Class<?>, Object>> registry = new THashMap<String, Pair<Class<?>, Object>>();
+	private HashObjObjMap<String, Pair<Class<?>, Object>> registry = HashObjObjMaps.<String, Pair<Class<?>, Object>> newMutableMap();
 	
 	//constructor
 	public Registry() {

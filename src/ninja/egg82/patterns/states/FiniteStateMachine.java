@@ -1,11 +1,12 @@
 package ninja.egg82.patterns.states;
 
-import gnu.trove.map.hash.THashMap;
+import com.koloboke.collect.map.hash.HashObjObjMap;
+import com.koloboke.collect.map.hash.HashObjObjMaps;
 
 public class FiniteStateMachine {
 	//vars
 	private FiniteState currentState = null;
-	private THashMap<Class<FiniteState>, FiniteState> states = new THashMap<Class<FiniteState>, FiniteState>();
+	private HashObjObjMap<Class<FiniteState>, FiniteState> states = HashObjObjMaps.<Class<FiniteState>, FiniteState> newMutableMap();
 	
 	//constructor
 	public FiniteStateMachine() {
