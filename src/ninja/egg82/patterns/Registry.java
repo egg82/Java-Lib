@@ -19,18 +19,19 @@ public class Registry implements IRegistry {
 		if (name == null) {
 			throw new IllegalArgumentException("name cannot be null.");
 		}
-		if (data.getClass() != type) {
-			try {
-				data = type.cast(data);
-			} catch (Exception ex) {
-				throw new RuntimeException("data type cannot be converted to the type specified.", ex);
-			}
-		}
 		
 		if (data == null) {
 			registry.remove(name);
 			keyCache = registry.keySet().toArray(new String[0]);
 		} else {
+			if (data.getClass() != type) {
+				try {
+					data = type.cast(data);
+				} catch (Exception ex) {
+					throw new RuntimeException("data type cannot be converted to the type specified.", ex);
+				}
+			}
+			
 			if (registry.containsKey(name)) {
 				registry.put(name, Pair.of(type, data));
 			} else {

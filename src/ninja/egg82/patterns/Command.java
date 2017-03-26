@@ -18,8 +18,8 @@ public abstract class Command {
 		this(0);
 	}
 	public Command(int delay) {
-		if (delay <= 0) {
-			throw new IllegalArgumentException("delay cann be less than zero.");
+		if (delay < 0) {
+			throw new IllegalArgumentException("delay cannot be less than zero.");
 		} else if (delay == 0) {
 			return;
 		} else {
