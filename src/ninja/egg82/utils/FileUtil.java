@@ -8,10 +8,9 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import com.koloboke.collect.map.hash.HashObjObjMap;
-import com.koloboke.collect.map.hash.HashObjObjMaps;
+import org.eclipse.collections.impl.map.mutable.UnifiedMap;
 
-public class FileUtil {
+public final class FileUtil {
     //vars
 	public static final Charset UTF_8 = Charset.forName("UTF-8");
 	public static final Charset ASCII = Charset.forName("ASCII");
@@ -19,8 +18,8 @@ public class FileUtil {
 	public static final String CURRENT_DIRECTORY = System.getProperty("user.dir");
 	public static final char DIRECTORY_SEPARATOR_CHAR = File.separatorChar;
 	
-	private static HashObjObjMap<String, FileInputStream> inStreams = HashObjObjMaps.<String, FileInputStream> newMutableMap();
-	private static HashObjObjMap<String, FileOutputStream> outStreams = HashObjObjMaps.<String, FileOutputStream> newMutableMap();
+	private static UnifiedMap<String, FileInputStream> inStreams = new UnifiedMap<String, FileInputStream>();
+	private static UnifiedMap<String, FileOutputStream> outStreams = new UnifiedMap<String, FileOutputStream>();
     
     //constructor
     public FileUtil() {

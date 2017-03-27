@@ -2,13 +2,14 @@ package ninja.egg82.patterns;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.ArrayList;
 
 import javax.swing.Timer;
 
+import org.eclipse.collections.impl.list.mutable.FastList;
+
 public abstract class Command {
 	//vars
-	public static final ArrayList<Observer> OBSERVERS = new ArrayList<Observer>();
+	public static final FastList<Observer> OBSERVERS = new FastList<Observer>();
 	
 	private Timer timer = null;
 	private long startTime = 0L;
@@ -29,7 +30,7 @@ public abstract class Command {
 	}
 	
 	//public
-	public void start() {
+	public final void start() {
 		if (timer != null) {
 			startTime = System.currentTimeMillis();
 			timer.start();
@@ -50,7 +51,7 @@ public abstract class Command {
 			onExecute(System.currentTimeMillis() - startTime);
 		}
 	};
-	protected void dispatch(String event, Object data) {
+	protected final void dispatch(String event, Object data) {
 		Observer.dispatch(OBSERVERS, this, event, data);
 	}
 }

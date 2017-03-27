@@ -2,7 +2,7 @@ package ninja.egg82.startup;
 
 import ninja.egg82.patterns.Registry;
 
-public class InitRegistry extends Registry {
+public final class InitRegistry extends Registry {
 	//vars
 	
 	//constructor

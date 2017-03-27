@@ -23,7 +23,7 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
 import org.bouncycastle.util.encoders.Base64;
 
-public class CryptoUtil implements ICryptoUtil {
+public final class CryptoUtil implements ICryptoUtil {
 	//vars
 	private MD5Digest md5 = new MD5Digest();
 	private SHA1Digest sha1 = new SHA1Digest();

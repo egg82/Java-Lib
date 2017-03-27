@@ -1,16 +1,14 @@
 package ninja.egg82.patterns;
 
-import java.util.ArrayList;
-
-import com.koloboke.collect.map.hash.HashObjObjMap;
-import com.koloboke.collect.map.hash.HashObjObjMaps;
+import org.eclipse.collections.impl.list.mutable.FastList;
+import org.eclipse.collections.impl.map.mutable.UnifiedMap;
 
 import ninja.egg82.utils.ReflectUtil;
 
-public class ServiceLocator {
+public final class ServiceLocator {
 	//vars
-	private static ArrayList<Class<?>> services = new ArrayList<Class<?>>();
-	private static HashObjObjMap<Class<?>, Object> initializedServices = HashObjObjMaps.<Class<?>, Object> newMutableMap();
+	private static FastList<Class<?>> services = new FastList<Class<?>>();
+	private static UnifiedMap<Class<?>, Object> initializedServices = new UnifiedMap<Class<?>, Object>();
 	
 	//constructor
 	public ServiceLocator() {
@@ -94,13 +92,13 @@ public class ServiceLocator {
 		}
 	}
 	
-	public static synchronized boolean hasService(Class<?> clazz) {
+	public synchronized static boolean hasService(Class<?> clazz) {
 		if (clazz == null) {
 			return false;
 		}
 		return services.contains(clazz);
 	}
-	public static synchronized boolean serviceIsInitialized(Class<?> clazz) {
+	public synchronized static boolean serviceIsInitialized(Class<?> clazz) {
 		if (clazz == null) {
 			return false;
 		}

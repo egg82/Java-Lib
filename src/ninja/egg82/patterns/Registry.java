@@ -1,14 +1,12 @@
 package ninja.egg82.patterns;
 
 import org.apache.commons.lang3.tuple.Pair;
-
-import com.koloboke.collect.map.hash.HashObjObjMap;
-import com.koloboke.collect.map.hash.HashObjObjMaps;
+import org.eclipse.collections.impl.map.mutable.UnifiedMap;
 
 public class Registry implements IRegistry {
 	//vars
 	private String[] keyCache = new String[0];
-	private HashObjObjMap<String, Pair<Class<?>, Object>> registry = HashObjObjMaps.<String, Pair<Class<?>, Object>> newMutableMap();
+	private UnifiedMap<String, Pair<Class<?>, Object>> registry = new UnifiedMap<String, Pair<Class<?>, Object>>();
 	
 	//constructor
 	public Registry() {
@@ -16,7 +14,7 @@ public class Registry implements IRegistry {
 	}
 	
 	//public
-	public synchronized void setRegister(String name, Class<?> type, Object data) {
+	public final synchronized void setRegister(String name, Class<?> type, Object data) {
 		if (name == null) {
 			throw new IllegalArgumentException("name cannot be null.");
 		}
@@ -41,7 +39,7 @@ public class Registry implements IRegistry {
 			}
 		}
 	}
-	public synchronized Object getRegister(String name) {
+	public final synchronized Object getRegister(String name) {
 		if (name == null) {
 			throw new IllegalArgumentException("name cannot be null.");
 		}
@@ -53,7 +51,7 @@ public class Registry implements IRegistry {
 		}
 		return null;
 	}
-	public synchronized Class<?> getRegisterClass(String name) {
+	public final synchronized Class<?> getRegisterClass(String name) {
 		if (name == null) {
 			throw new IllegalArgumentException("name cannot be null.");
 		}
@@ -65,19 +63,19 @@ public class Registry implements IRegistry {
 		}
 		return null;
 	}
-	public synchronized boolean hasRegister(String name) {
+	public final synchronized boolean hasRegister(String name) {
 		if (name == null) {
 			return false;
 		}
 		return registry.containsKey(name);
 	}
 	
-	public synchronized void clear() {
+	public final synchronized void clear() {
 		registry.clear();
 		keyCache = new String[0];
 	}
 	
-	public String[] getRegistryNames() {
+	public final String[] getRegistryNames() {
 		return keyCache.clone();
 	}
 	

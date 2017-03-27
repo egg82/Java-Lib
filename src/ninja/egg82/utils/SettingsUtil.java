@@ -6,7 +6,7 @@ import org.json.JSONObject;
 
 import ninja.egg82.patterns.IRegistry;
 
-public class SettingsUtil {
+public final class SettingsUtil {
     //vars
     
     //constructor
@@ -122,61 +122,6 @@ public class SettingsUtil {
             		registry.setRegister(i, Object.class, obj);
             	}
     		}
-    		
-            /*if (obj.getClass().isArray()) {
-                Object[] arr = (Object[]) registry.getRegister(i);
-                deepCopy(obj, arr);
-                registry.setRegister(i, arr);
-            } else if (obj instanceof JSONObject) {
-                Object obj = registry.getRegister(i);
-                deepCopy(obj, obj);
-                registry.setRegister(i, obj);
-            } else {
-            	registry.setRegister(i, obj);
-            }*/
         }
-    	
-        /*for (String i : from.keySet()) {
-            if (to.getRegister(i) != null) {
-                if (from.get(i).getClass().isArray()) {
-                    Object[] arr = (Object[]) to.getRegister(i);
-                    deepCopy(from.get(i), arr);
-                    to.setRegister(i, arr);
-                } else if (from.get(i) instanceof JSONObject) {
-                    Object obj = to.getRegister(i);
-                    deepCopy(from.get(i), obj);
-                    to.setRegister(i, obj);
-                } else {
-                    to.setRegister(i, from.get(i));
-                }
-            }
-        }*/
     }
-    /*private void deepCopy(Object from, Object to) {
-        for (Method m : from.getClass().getMethods()) {
-            String i = m.getName();
-            if (Util.getMethod(i, to) != null) {
-                Object obj = null;
-                Object obj2 = null;
-                
-                try {
-                    obj = Util.getMethod(i, from).get(from);
-                    obj2 = Util.getMethod(i, to).get(to);
-                } catch (Exception ex) {
-                    System.out.println(ex.getMessage());
-                    continue;
-                }
-                
-                if (obj.getClass().isArray() || obj instanceof JSONObject) {
-                    deepCopy(obj, obj2);
-                } else {
-                    try {
-                        Util.getMethod(i, to).set(to, obj);
-                    } catch (Exception ex) {
-                         System.out.println(ex.getMessage());
-                    }
-                }
-            }
-        }
-    }*/
 }

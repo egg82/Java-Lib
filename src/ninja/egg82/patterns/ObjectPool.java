@@ -4,7 +4,7 @@ import java.util.ArrayDeque;
 
 import ninja.egg82.patterns.prototypes.IPrototype;
 
-public class ObjectPool<T extends IPrototype> {
+public final class ObjectPool<T extends IPrototype> {
 	//vars
 	private ArrayDeque<T> pool = new ArrayDeque<T>();
 	private T masterInstance;

@@ -4,7 +4,7 @@ import ninja.egg82.patterns.ServiceLocator;
 import ninja.egg82.patterns.prototypes.PrototypeFactory;
 import ninja.egg82.utils.CryptoUtil;
 
-public class Start {
+public final class Start {
     //vars
     
     //constructor

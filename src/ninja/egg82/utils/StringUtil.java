@@ -1,6 +1,6 @@
 package ninja.egg82.utils;
 
-public class StringUtil {
+public final class StringUtil {
 	//vars
 	private static final char[] subset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+{}|:\"<>?`-=[]\\;',./".toCharArray();
 	

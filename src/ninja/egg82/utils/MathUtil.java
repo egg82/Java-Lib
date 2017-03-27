@@ -1,6 +1,6 @@
 package ninja.egg82.utils;
 
-public class MathUtil {
+public final class MathUtil {
 	//vars
 	
 	//constructor

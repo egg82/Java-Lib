@@ -1,11 +1,10 @@
 package ninja.egg82.patterns.prototypes;
 
-import com.koloboke.collect.map.hash.HashObjObjMap;
-import com.koloboke.collect.map.hash.HashObjObjMaps;
+import org.eclipse.collections.impl.map.mutable.UnifiedMap;
 
-public class PrototypeFactory implements IPrototypeFactory {
+public final class PrototypeFactory implements IPrototypeFactory {
 	//vars
-	private HashObjObjMap<String, IPrototype> masterInstances = HashObjObjMaps.<String, IPrototype> newMutableMap();
+	private UnifiedMap<String, IPrototype> masterInstances = new UnifiedMap<String, IPrototype>();
 	
 	//constructor
 	public PrototypeFactory() {

@@ -1,12 +1,11 @@
 package ninja.egg82.patterns.states;
 
-import com.koloboke.collect.map.hash.HashObjObjMap;
-import com.koloboke.collect.map.hash.HashObjObjMaps;
+import org.eclipse.collections.impl.map.mutable.UnifiedMap;
 
-public class FiniteStateMachine {
+public final class FiniteStateMachine {
 	//vars
 	private FiniteState currentState = null;
-	private HashObjObjMap<Class<FiniteState>, FiniteState> states = HashObjObjMaps.<Class<FiniteState>, FiniteState> newMutableMap();
+	private UnifiedMap<Class<FiniteState>, FiniteState> states = new UnifiedMap<Class<FiniteState>, FiniteState>();
 	
 	//constructor
 	public FiniteStateMachine() {

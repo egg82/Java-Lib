@@ -1,10 +1,10 @@
 package ninja.egg82.patterns.states;
 
-import java.util.ArrayList;
+import org.eclipse.collections.impl.list.mutable.FastList;
 
 public abstract class FiniteState {
 	//vars
-	private ArrayList<Class<?>> exitStates = new ArrayList<Class<?>>();
+	private FastList<Class<?>> exitStates = new FastList<Class<?>>();
 	protected FiniteStateMachine finiteStateMachine = null;
 	
 	//constructor
@@ -19,7 +19,7 @@ public abstract class FiniteState {
 	public abstract void enter();
 	public abstract void exit();
 	
-	public void addExitState(Class<?> state) {
+	public final void addExitState(Class<?> state) {
 		if (state == null) {
 			throw new IllegalArgumentException("state cannot be null.");
 		}
@@ -27,13 +27,13 @@ public abstract class FiniteState {
 			exitStates.add(state);
 		}
 	}
-	public void removeExitState(Class<?> state) {
+	public final void removeExitState(Class<?> state) {
 		if (state == null) {
 			throw new IllegalArgumentException("state cannot be null.");
 		}
 		exitStates.remove(state);
 	}
-	public boolean hasExitState(Class<?> state) {
+	public final boolean hasExitState(Class<?> state) {
 		if (state == null) {
 			throw new IllegalArgumentException("state cannot be null.");
 		}

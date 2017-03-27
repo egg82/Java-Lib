@@ -2,9 +2,11 @@ package ninja.egg82.patterns;
 
 import java.util.ArrayList;
 
-public class Observer {
+import org.eclipse.collections.impl.list.mutable.FastList;
+
+public final class Observer {
 	//vars
-	private ArrayList<TriFunction<Object, String, Object, Void>> listeners = new ArrayList<TriFunction<Object, String, Object, Void>>();
+	private FastList<TriFunction<Object, String, Object, Void>> listeners = new FastList<TriFunction<Object, String, Object, Void>>();
 	
 	//constructor
 	public Observer() {
@@ -13,32 +15,66 @@ public class Observer {
 	
 	//public
 	public static void add(ArrayList<Observer> list, Observer observer) {
-		if (list == null || observer == null) {
+		if (list == null) {
+			throw new IllegalArgumentException("list cannot be null.");
+		}
+		if (observer == null || list.contains(observer)) {
 			return;
 		}
-		
-		if (list.contains(observer)) {
+		list.add(observer);
+	}
+	public static void add(FastList<Observer> list, Observer observer) {
+		if (list == null) {
+			throw new IllegalArgumentException("list cannot be null.");
+		}
+		if (observer == null || list.contains(observer)) {
 			return;
 		}
-		
 		list.add(observer);
 	}
 	public static void remove(ArrayList<Observer> list, Observer observer) {
-		if (list == null || observer == null) {
+		if (list == null) {
+			throw new IllegalArgumentException("list cannot be null.");
+		}
+		if (observer == null) {
 			return;
 		}
-		
+		list.remove(observer);
+	}
+	public static void remove(FastList<Observer> list, Observer observer) {
+		if (list == null) {
+			throw new IllegalArgumentException("list cannot be null.");
+		}
+		if (observer == null) {
+			return;
+		}
 		list.remove(observer);
 	}
 	
 	public static void dispatch(ArrayList<Observer> list, Object sender, String event) {
 		dispatch(list, sender, event, null);
 	}
+	public static void dispatch(FastList<Observer> list, Object sender, String event) {
+		dispatch(list, sender, event, null);
+	}
 	public static void dispatch(ArrayList<Observer> list, Object sender, String event, Object data) {
-		if (list == null || list.isEmpty()) {
+		if (list == null) {
+			throw new IllegalArgumentException("list cannot be null.");
+		}
+		if (list.isEmpty()) {
 			return;
 		}
-		
+		for (Observer observer : list) {
+			observer.dispatch(sender, event, data);
+		}
+	}
+	public static void dispatch(FastList<Observer> list, Object sender, String event, Object data) {
+		if (list == null) {
+			throw new IllegalArgumentException("list cannot be null.");
+		}
+		if (list.isEmpty()) {
+			return;
+		}
 		for (Observer observer : list) {
 			observer.dispatch(sender, event, data);
 		}
@@ -46,20 +82,17 @@ public class Observer {
 	
 	public synchronized void add(TriFunction<Object, String, Object, Void> listener) {
 		if (listener == null) {
-			return;
+			throw new IllegalArgumentException("listener cannot be null.");
 		}
-		
 		if (listeners.contains(listener)) {
 			return;
 		}
-		
 		listeners.add(listener);
 	}
 	public synchronized void remove(TriFunction<Object, String, Object, Void> listener) {
 		if (listener == null) {
-			return;
+			throw new IllegalArgumentException("listener cannot be null.");
 		}
-		
 		listeners.remove(listener);
 	}
 	public synchronized void removeAll() {
