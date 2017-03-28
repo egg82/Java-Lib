@@ -1,11 +1,11 @@
 package ninja.egg82.patterns.states;
 
-import org.eclipse.collections.impl.map.mutable.UnifiedMap;
+import java.util.HashMap;
 
 public final class FiniteStateMachine {
 	//vars
 	private FiniteState currentState = null;
-	private UnifiedMap<Class<FiniteState>, FiniteState> states = new UnifiedMap<Class<FiniteState>, FiniteState>();
+	private HashMap<Class<FiniteState>, FiniteState> states = new HashMap<Class<FiniteState>, FiniteState>();
 	
 	//constructor
 	public FiniteStateMachine() {

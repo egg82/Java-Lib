@@ -1,14 +1,14 @@
 package ninja.egg82.patterns;
 
-import org.eclipse.collections.impl.list.mutable.FastList;
-import org.eclipse.collections.impl.map.mutable.UnifiedMap;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import ninja.egg82.utils.ReflectUtil;
 
 public final class ServiceLocator {
 	//vars
-	private static FastList<Class<?>> services = new FastList<Class<?>>();
-	private static UnifiedMap<Class<?>, Object> initializedServices = new UnifiedMap<Class<?>, Object>();
+	private static ArrayList<Class<?>> services = new ArrayList<Class<?>>();
+	private static HashMap<Class<?>, Object> initializedServices = new HashMap<Class<?>, Object>();
 	
 	//constructor
 	public ServiceLocator() {

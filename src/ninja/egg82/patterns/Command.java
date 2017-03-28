@@ -2,14 +2,13 @@ package ninja.egg82.patterns;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
 
 import javax.swing.Timer;
 
-import org.eclipse.collections.impl.list.mutable.FastList;
-
 public abstract class Command {
 	//vars
-	public static final FastList<Observer> OBSERVERS = new FastList<Observer>();
+	public static final ArrayList<Observer> OBSERVERS = new ArrayList<Observer>();
 	
 	private Timer timer = null;
 	private long startTime = 0L;

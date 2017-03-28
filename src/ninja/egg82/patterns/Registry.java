@@ -1,12 +1,11 @@
 package ninja.egg82.patterns;
 
-import org.apache.commons.lang3.tuple.Pair;
-import org.eclipse.collections.impl.map.mutable.UnifiedMap;
+import java.util.HashMap;
 
 public class Registry implements IRegistry {
 	//vars
 	private String[] keyCache = new String[0];
-	private UnifiedMap<String, Pair<Class<?>, Object>> registry = new UnifiedMap<String, Pair<Class<?>, Object>>();
+	private HashMap<String, Pair<Class<?>, Object>> registry = new HashMap<String, Pair<Class<?>, Object>>();
 	
 	//constructor
 	public Registry() {
@@ -32,9 +31,9 @@ public class Registry implements IRegistry {
 			}
 			
 			if (registry.containsKey(name)) {
-				registry.put(name, Pair.of(type, data));
+				registry.put(name, new Pair<Class<?>, Object>(type, data));
 			} else {
-				registry.put(name, Pair.of(type, data));
+				registry.put(name, new Pair<Class<?>, Object>(type, data));
 				keyCache = registry.keySet().toArray(new String[0]);
 			}
 		}

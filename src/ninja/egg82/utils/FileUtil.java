@@ -4,11 +4,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Set;
-
-import org.eclipse.collections.impl.map.mutable.UnifiedMap;
 
 public final class FileUtil {
     //vars
@@ -18,8 +17,8 @@ public final class FileUtil {
 	public static final String CURRENT_DIRECTORY = System.getProperty("user.dir");
 	public static final char DIRECTORY_SEPARATOR_CHAR = File.separatorChar;
 	
-	private static UnifiedMap<String, FileInputStream> inStreams = new UnifiedMap<String, FileInputStream>();
-	private static UnifiedMap<String, FileOutputStream> outStreams = new UnifiedMap<String, FileOutputStream>();
+	private static HashMap<String, FileInputStream> inStreams = new HashMap<String, FileInputStream>();
+	private static HashMap<String, FileOutputStream> outStreams = new HashMap<String, FileOutputStream>();
     
     //constructor
     public FileUtil() {

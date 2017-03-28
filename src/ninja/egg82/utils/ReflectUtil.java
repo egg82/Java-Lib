@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
 
-import org.eclipse.collections.impl.list.mutable.FastList;
 import org.reflections.ReflectionUtils;
 import org.reflections.Reflections;
 import org.reflections.scanners.ResourcesScanner;
@@ -18,7 +17,6 @@ import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
 
 import com.google.common.collect.Sets;
-
 
 public final class ReflectUtil {
 	//vars
@@ -60,7 +58,7 @@ public final class ReflectUtil {
 	
 	public static Object[] getStaticFields(Class<?> c) {
 		Field[] fields = c.getDeclaredFields();
-		FastList<Object> returns = new FastList<Object>();
+		ArrayList<Object> returns = new ArrayList<Object>();
 		
 		for (int i = 0; i < fields.length; i++) {
 			if (!Modifier.isPrivate(fields[i].getModifiers())) {

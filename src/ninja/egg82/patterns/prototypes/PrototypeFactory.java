@@ -1,10 +1,10 @@
 package ninja.egg82.patterns.prototypes;
 
-import org.eclipse.collections.impl.map.mutable.UnifiedMap;
+import java.util.HashMap;
 
 public final class PrototypeFactory implements IPrototypeFactory {
 	//vars
-	private UnifiedMap<String, IPrototype> masterInstances = new UnifiedMap<String, IPrototype>();
+	private HashMap<String, IPrototype> masterInstances = new HashMap<String, IPrototype>();
 	
 	//constructor
 	public PrototypeFactory() {

@@ -1,10 +1,10 @@
 package ninja.egg82.patterns.states;
 
-import org.eclipse.collections.impl.list.mutable.FastList;
+import java.util.ArrayList;
 
 public abstract class FiniteState {
 	//vars
-	private FastList<Class<?>> exitStates = new FastList<Class<?>>();
+	private ArrayList<Class<?>> exitStates = new ArrayList<Class<?>>();
 	protected FiniteStateMachine finiteStateMachine = null;
 	
 	//constructor
