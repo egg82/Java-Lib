@@ -1,6 +1,7 @@
 package ninja.egg82.patterns;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public final class Observer {
 	//vars
@@ -12,7 +13,7 @@ public final class Observer {
 	}
 	
 	//public
-	public static void add(ArrayList<Observer> list, Observer observer) {
+	public static void add(List<Observer> list, Observer observer) {
 		if (list == null) {
 			throw new IllegalArgumentException("list cannot be null.");
 		}
@@ -21,7 +22,7 @@ public final class Observer {
 		}
 		list.add(observer);
 	}
-	public static void remove(ArrayList<Observer> list, Observer observer) {
+	public static void remove(List<Observer> list, Observer observer) {
 		if (list == null) {
 			throw new IllegalArgumentException("list cannot be null.");
 		}
@@ -31,10 +32,10 @@ public final class Observer {
 		list.remove(observer);
 	}
 	
-	public static void dispatch(ArrayList<Observer> list, Object sender, String event) {
+	public static void dispatch(List<Observer> list, Object sender, String event) {
 		dispatch(list, sender, event, null);
 	}
-	public static void dispatch(ArrayList<Observer> list, Object sender, String event, Object data) {
+	public static void dispatch(List<Observer> list, Object sender, String event, Object data) {
 		if (list == null) {
 			throw new IllegalArgumentException("list cannot be null.");
 		}

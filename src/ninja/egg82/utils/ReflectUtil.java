@@ -5,6 +5,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 import org.reflections.ReflectionUtils;
@@ -74,7 +75,7 @@ public final class ReflectUtil {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static <T> ArrayList<T> getClasses(T clazz, String pkg) {
+	public static <T> List<T> getClasses(T clazz, String pkg) {
 		Reflections ref = new Reflections(new ConfigurationBuilder()
 				.setScanners(new SubTypesScanner(false),
 						new ResourcesScanner(),
