@@ -1,14 +1,13 @@
 package ninja.egg82.patterns;
 
 import java.util.HashMap;
-import java.util.HashSet;
 
 public class Registry implements IRegistry {
 	//vars
 	private String[] keyCache = new String[0];
 	private boolean keysDirty = false;
 	private HashMap<String, Pair<Class<?>, Object>> registry = new HashMap<String, Pair<Class<?>, Object>>();
-	private HashSet<Object> values = new HashSet<Object>();
+	private HashMap<Object, String> reverseRegistry = new HashMap<Object, String>();
 	
 	//constructor
 	public Registry() {
@@ -25,7 +24,7 @@ public class Registry implements IRegistry {
 			Pair<Class<?>, Object> pair = registry.get(name);
 			if (pair != null) {
 				registry.remove(name);
-				values.remove(pair.getRight());
+				reverseRegistry.remove(pair.getRight());
 				keysDirty = true;
 			}
 		} else {
@@ -39,13 +38,12 @@ public class Registry implements IRegistry {
 			
 			Pair<Class<?>, Object> pair = registry.get(name);
 			registry.put(name, new Pair<Class<?>, Object>(type, data));
+			reverseRegistry.put(data, name);
 			
-			if (pair != null) {
-				values.remove(pair.getRight());
-			} else {
+			// Key didn't exist before. Added.
+			if (pair == null) {
 				keysDirty = true;
 			}
-			values.add(data);
 		}
 	}
 	public final synchronized Object getRegister(String name) {
@@ -59,6 +57,12 @@ public class Registry implements IRegistry {
 			return result.getRight();
 		}
 		return null;
+	}
+	public final synchronized String getName(Object data) {
+		if (data == null) {
+			throw new IllegalArgumentException("data cannot be null.");
+		}
+		return reverseRegistry.get(data);
 	}
 	public final synchronized Class<?> getRegisterClass(String name) {
 		if (name == null) {
@@ -83,12 +87,12 @@ public class Registry implements IRegistry {
 		if (data == null) {
 			return false;
 		}
-		return values.contains(data);
+		return reverseRegistry.containsKey(data);
 	}
 	
 	public final synchronized void clear() {
 		registry.clear();
-		values.clear();
+		reverseRegistry.clear();
 		keyCache = new String[0];
 		keysDirty = false;
 	}
