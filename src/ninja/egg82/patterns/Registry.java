@@ -1,11 +1,14 @@
 package ninja.egg82.patterns;
 
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class Registry implements IRegistry {
 	//vars
 	private String[] keyCache = new String[0];
+	private boolean keysDirty = false;
 	private HashMap<String, Pair<Class<?>, Object>> registry = new HashMap<String, Pair<Class<?>, Object>>();
+	private HashSet<Object> values = new HashSet<Object>();
 	
 	//constructor
 	public Registry() {
@@ -19,8 +22,12 @@ public class Registry implements IRegistry {
 		}
 		
 		if (data == null) {
-			registry.remove(name);
-			keyCache = registry.keySet().toArray(new String[0]);
+			Pair<Class<?>, Object> pair = registry.get(name);
+			if (pair != null) {
+				registry.remove(name);
+				values.remove(pair.getRight());
+				keysDirty = true;
+			}
 		} else {
 			if (data.getClass() != type) {
 				try {
@@ -30,12 +37,15 @@ public class Registry implements IRegistry {
 				}
 			}
 			
-			if (registry.containsKey(name)) {
-				registry.put(name, new Pair<Class<?>, Object>(type, data));
+			Pair<Class<?>, Object> pair = registry.get(name);
+			registry.put(name, new Pair<Class<?>, Object>(type, data));
+			
+			if (pair != null) {
+				values.remove(pair.getRight());
 			} else {
-				registry.put(name, new Pair<Class<?>, Object>(type, data));
-				keyCache = registry.keySet().toArray(new String[0]);
+				keysDirty = true;
 			}
+			values.add(data);
 		}
 	}
 	public final synchronized Object getRegister(String name) {
@@ -62,19 +72,32 @@ public class Registry implements IRegistry {
 		}
 		return null;
 	}
+	
 	public final synchronized boolean hasRegister(String name) {
 		if (name == null) {
 			return false;
 		}
 		return registry.containsKey(name);
 	}
+	public final synchronized boolean hasValue(Object data) {
+		if (data == null) {
+			return false;
+		}
+		return values.contains(data);
+	}
 	
 	public final synchronized void clear() {
 		registry.clear();
+		values.clear();
 		keyCache = new String[0];
+		keysDirty = false;
 	}
 	
 	public final String[] getRegistryNames() {
+		if (keysDirty) {
+			keyCache = registry.keySet().toArray(new String[0]);
+			keysDirty = false;
+		}
 		return keyCache.clone();
 	}
 	

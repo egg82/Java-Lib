@@ -5,7 +5,9 @@ public interface IRegistry {
 	void setRegister(String name, Class<?> type, Object data);
 	Object getRegister(String name);
 	Class<?> getRegisterClass(String name);
+	
 	boolean hasRegister(String name);
+	boolean hasValue(Object data);
 	
 	void clear();
 	String[] getRegistryNames();
