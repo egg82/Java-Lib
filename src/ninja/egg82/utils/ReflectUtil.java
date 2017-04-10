@@ -76,14 +76,19 @@ public final class ReflectUtil {
 	
 	@SuppressWarnings("unchecked")
 	public static <T> List<T> getClasses(T clazz, String pkg) {
-		Reflections ref = new Reflections(new ConfigurationBuilder()
-				.setScanners(new SubTypesScanner(false),
-						new ResourcesScanner(),
-						new TypeElementsScanner())
-				.setUrls(ClasspathHelper.forPackage(pkg))
-				.filterInputsBy(new FilterBuilder().include(FilterBuilder.prefix(pkg))));
-		Set<String> typeSet = ref.getStore().get("TypeElementsScanner").keySet();
+		Reflections ref = null;
+		try {
+			ref = new Reflections(new ConfigurationBuilder()
+					.setScanners(new SubTypesScanner(false),
+							new ResourcesScanner(),
+							new TypeElementsScanner())
+					.setUrls(ClasspathHelper.forPackage(pkg))
+					.filterInputsBy(new FilterBuilder().include(FilterBuilder.prefix(pkg))));
+		} catch (Exception ex) {
+			return new ArrayList<T>();
+		}
 		
+		Set<String> typeSet = ref.getStore().get("TypeElementsScanner").keySet();
 		Set<Class<?>> set = Sets.newHashSet(ReflectionUtils.forNames(typeSet, ref.getConfiguration().getClassLoaders()));
 		ArrayList<T> list = new ArrayList<T>();
 		
