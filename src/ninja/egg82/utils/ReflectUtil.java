@@ -75,7 +75,11 @@ public final class ReflectUtil {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static <T> List<T> getClasses(T clazz, String pkg) {
+	public static <T> List<Class<? extends T>> getClasses(Class<T> clazz, String pkg) {
+		if (pkg.lastIndexOf('.') != pkg.length() - 1) {
+			pkg = pkg + ".";
+		}
+		
 		Reflections ref = null;
 		try {
 			ref = new Reflections(new ConfigurationBuilder()
@@ -85,16 +89,20 @@ public final class ReflectUtil {
 					.setUrls(ClasspathHelper.forPackage(pkg))
 					.filterInputsBy(new FilterBuilder().include(FilterBuilder.prefix(pkg))));
 		} catch (Exception ex) {
-			return new ArrayList<T>();
+			return new ArrayList<Class<? extends T>>();
 		}
 		
 		Set<String> typeSet = ref.getStore().get("TypeElementsScanner").keySet();
 		Set<Class<?>> set = Sets.newHashSet(ReflectionUtils.forNames(typeSet, ref.getConfiguration().getClassLoaders()));
-		ArrayList<T> list = new ArrayList<T>();
+		ArrayList<Class<? extends T>> list = new ArrayList<Class<? extends T>>();
 		
-		Iterator<?> i = set.iterator();
+		Iterator<Class<?>> i = set.iterator();
 		while (i.hasNext()) {
-			list.add((T) i.next());
+			Class<T> next = (Class<T>) i.next();
+			if (next.getName().contains("$")) {
+				continue;
+			}
+			list.add(next);
 		}
 		
 		return list;
