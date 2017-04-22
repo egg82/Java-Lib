@@ -40,9 +40,12 @@ public class Registry implements IRegistry {
 			registry.put(name, new Pair<Class<?>, Object>(type, data));
 			reverseRegistry.put(data, name);
 			
-			// Key didn't exist before. Added.
 			if (pair == null) {
+				// Key didn't exist before. Added.
 				keysDirty = true;
+			} else {
+				// Key existed before. Need to remove old value->key from reverse registry.
+				reverseRegistry.remove(pair.getRight());
 			}
 		}
 	}

@@ -28,28 +28,78 @@ public final class ReflectUtil {
 	}
 	
 	//public
-	public static void invokeMethod(String method, Object obj) {
+	public static Object invokeMethod(String method, Object obj) {
+		if (obj == null) {
+			return null;
+		}
+		
 	    Method find = null;
 	    
 	    try {
 	        find = obj.getClass().getMethod(method, (Class<?>[]) null);
 	    } catch (Exception ex) {
-	        
+	    	return null;
 	    }
 	    
-	    if (find != null) {
-	        try {
-	            find.invoke(obj, (Object[]) null);
-	        } catch (Exception ex) {
-	            
-	        }
-	    }
+        try {
+            return find.invoke(obj, (Object[]) null);
+        } catch (Exception ex) {
+        	return null;
+        }
 	}
-	public static Field getMethod(String method, Object obj) {
-	    Field find;
+	public static Object invokeMethod(String method, Object obj, Object... params) {
+		if (obj == null) {
+			return null;
+		}
+		
+		if (params == null || params.length == 0) {
+			return invokeMethod(method, obj);
+		}
+		
+	    Method find = null;
+	    
+	    Class<?>[] classes = new Class<?>[params.length];
+	    for (int i = 0; i < params.length; i++) {
+	    	classes[i] = params[i].getClass();
+	    }
 	    
 	    try {
-	        find = obj.getClass().getDeclaredField(method);
+	        find = obj.getClass().getMethod(method, classes);
+	    } catch (Exception ex) {
+	        return null;
+	    }
+	    
+        try {
+            return find.invoke(obj, params);
+        } catch (Exception ex) {
+        	return null;
+        }
+	}
+	
+	public static Field getField(String field, Object obj) {
+		if (obj == null) {
+			return null;
+		}
+		
+		Field find;
+	    
+	    try {
+	        find = obj.getClass().getDeclaredField(field);
+	    } catch (Exception ex) {
+	        return null;
+	    }
+	    
+	    return find;
+	}
+	public static Method getMethod(String method, Object obj) {
+		if (obj == null) {
+			return null;
+		}
+		
+		Method find;
+	    
+	    try {
+	        find = obj.getClass().getDeclaredMethod(method);
 	    } catch (Exception ex) {
 	        return null;
 	    }
@@ -58,6 +108,10 @@ public final class ReflectUtil {
 	}
 	
 	public static Object[] getStaticFields(Class<?> c) {
+		if (c == null) {
+			throw new IllegalArgumentException("c cannot be null.");
+		}
+		
 		Field[] fields = c.getDeclaredFields();
 		ArrayList<Object> returns = new ArrayList<Object>();
 		
@@ -76,6 +130,13 @@ public final class ReflectUtil {
 	
 	@SuppressWarnings("unchecked")
 	public static <T> List<Class<? extends T>> getClasses(Class<T> clazz, String pkg) {
+		if (clazz == null) {
+			throw new IllegalArgumentException("clazz cannot be null.");
+		}
+		if (pkg == null) {
+			throw new IllegalArgumentException("pkg cannot be null.");
+		}
+		
 		if (pkg.lastIndexOf('.') != pkg.length() - 1) {
 			pkg = pkg + ".";
 		}
@@ -109,6 +170,10 @@ public final class ReflectUtil {
 	}
 	
 	public static Class<?> getClassFromName(String name) {
+		if (name == null) {
+			return null;
+		}
+		
 		try {
 			return Class.forName(name);
 		} catch (Exception ex) {
@@ -117,6 +182,10 @@ public final class ReflectUtil {
 	}
 	
 	public static boolean doesExtend(Class<?> baseClass, Class<?> classToTest) {
+		if (classToTest == null || baseClass == null) {
+			return false;
+		}
+		
 		return classToTest == baseClass || classToTest.isAssignableFrom(baseClass);
 	}
 	
