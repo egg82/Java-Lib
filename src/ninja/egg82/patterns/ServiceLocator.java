@@ -9,6 +9,7 @@ public final class ServiceLocator {
 	//vars
 	private static ArrayList<Class<?>> services = new ArrayList<Class<?>>();
 	private static HashMap<Class<?>, Object> initializedServices = new HashMap<Class<?>, Object>();
+	private static HashMap<Class<?>, Object> lookupCache = new HashMap<Class<?>, Object>();
 	
 	//constructor
 	public ServiceLocator() {
@@ -22,11 +23,17 @@ public final class ServiceLocator {
 		}
 		
 		Object result = initializedServices.get(clazz);
-		int index = services.indexOf(clazz);
 		
-		if (result == null && index > -1) {
-			result = initializeService(services.get(index));
-			initializedServices.put(clazz, result);
+		if (result == null) {
+			int index = services.indexOf(clazz);
+			if (index > -1) {
+				result = initializeService(services.get(index));
+				initializedServices.put(clazz, result);
+			}
+		}
+		
+		if (result == null) {
+			result = lookupCache.get(clazz);
 		}
 		
 		if (result == null) {
@@ -38,6 +45,7 @@ public final class ServiceLocator {
 						result = initializeService(c);
 						initializedServices.put(clazz, result);
 					}
+					lookupCache.put(clazz, result);
 					break;
 				}
 			}
@@ -53,7 +61,9 @@ public final class ServiceLocator {
 			throw new IllegalArgumentException("clazz cannot be null.");
 		}
 		
+		// Destroy any existing services and cache
 		initializedServices.remove(clazz);
+		lookupCache.entrySet().removeIf(v -> ReflectUtil.doesExtend(v.getValue().getClass(), clazz));
 		
 		int index = services.indexOf(clazz);
 		if (index > -1) {
@@ -85,6 +95,7 @@ public final class ServiceLocator {
 					if (result != null) {
 						initializedServices.remove(clazz);
 					}
+					lookupCache.entrySet().removeIf(v -> ReflectUtil.doesExtend(v.getValue().getClass(), clazz));
 					services.remove(i);
 					return;
 				}
