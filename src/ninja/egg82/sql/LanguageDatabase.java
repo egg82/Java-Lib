@@ -141,10 +141,10 @@ public class LanguageDatabase {
 		List<Integer> ids = null;
 		
 		if (caseSensitive) {
+			ids = containsRows.get(search);
+		} else {
 			search = search.toLowerCase();
 			ids = containsCiRows.get(search);
-		} else {
-			ids = containsRows.get(search);
 		}
 		
 		return (ids != null) ? ids.stream().mapToInt(i -> i).toArray() : new int[0];
@@ -159,37 +159,80 @@ public class LanguageDatabase {
 	public int[] substring(String search, boolean caseSensitive) {
 		ArrayList<Integer> ids = new ArrayList<Integer>();
 		ArrayList<Pair<String, Integer>> keyLevenshtein = new ArrayList<Pair<String, Integer>>();
+		ArrayList<Pair<String, Double>> keyScore = new ArrayList<Pair<String, Double>>();
+		double maxLevenshtein = 0.0d;
+		double maxSize = 0.0d;
 		
 		if (caseSensitive) {
-			search = search.toLowerCase();
-			
-			for (String key : containsCiRows.keySet()) {
+			for (Entry<String, List<Integer>> kvp : containsRows.entrySet()) {
+				String key = kvp.getKey();
 				if (key.contains(search)) {
-					keyLevenshtein.add(new Pair<String, Integer>(key, StringUtils.getLevenshteinDistance(key, search)));
+					int currentDistance = StringUtils.getLevenshteinDistance(key, search);
+					keyLevenshtein.add(new Pair<String, Integer>(key, currentDistance));
+					if (maxLevenshtein < currentDistance) {
+						maxLevenshtein = currentDistance;
+					}
+					int size = kvp.getValue().size();
+					if (maxSize < size) {
+						maxSize = size;
+					}
 				}
 			}
+			
+			for (int i = 0; i < keyLevenshtein.size(); i++) {
+				double score = ((double) keyLevenshtein.get(i).getRight()) / maxLevenshtein;
+				score -= (((double) containsRows.get(keyLevenshtein.get(i).getLeft()).size()) / maxSize) / 5.0d;
+				keyScore.add(new Pair<String, Double>(keyLevenshtein.get(i).getLeft(), score));
+			}
 		} else {
-			for (String key : containsRows.keySet()) {
+			search = search.toLowerCase();
+			
+			for (Entry<String, List<Integer>> kvp : containsCiRows.entrySet()) {
+				String key = kvp.getKey();
 				if (key.contains(search)) {
-					keyLevenshtein.add(new Pair<String, Integer>(key, StringUtils.getLevenshteinDistance(key, search)));
+					int currentDistance = StringUtils.getLevenshteinDistance(key, search);
+					keyLevenshtein.add(new Pair<String, Integer>(key, currentDistance));
+					if (maxLevenshtein < currentDistance) {
+						maxLevenshtein = currentDistance;
+					}
+					int size = kvp.getValue().size();
+					if (maxSize < size) {
+						maxSize = size;
+					}
 				}
+			}
+			
+			for (int i = 0; i < keyLevenshtein.size(); i++) {
+				double score = ((double) keyLevenshtein.get(i).getRight()) / maxLevenshtein;
+				score -= (((double) containsCiRows.get(keyLevenshtein.get(i).getLeft()).size()) / maxSize) / 5.0d;
+				keyScore.add(new Pair<String, Double>(keyLevenshtein.get(i).getLeft(), score));
 			}
 		}
 		
-		keyLevenshtein.sort(new Comparator<Pair<String, Integer>>() {
+		keyScore.sort(new Comparator<Pair<String, Double>>() {
 			@Override
-			public int compare(Pair<String, Integer> one, Pair<String, Integer> two) {
+			public int compare(Pair<String, Double> one, Pair<String, Double> two) {
 				return one.getRight().compareTo(two.getRight());
 			}
 		});
 		
 		if (caseSensitive) {
-			for (int i = 0; i < keyLevenshtein.size(); i++) {
-				ids.addAll(containsCiRows.get(keyLevenshtein.get(i).getLeft()));
+			for (int i = 0; i < keyScore.size(); i++) {
+				List<Integer> temp = containsRows.get(keyScore.get(i).getLeft());
+				for (int j = 0; j < temp.size(); j++) {
+					if (!ids.contains(temp.get(j))) {
+						ids.add(temp.get(j));
+					}
+				}
 			}
 		} else {
-			for (int i = 0; i < keyLevenshtein.size(); i++) {
-				ids.addAll(containsRows.get(keyLevenshtein.get(i).getLeft()));
+			for (int i = 0; i < keyScore.size(); i++) {
+				List<Integer> temp = containsCiRows.get(keyScore.get(i).getLeft());
+				for (int j = 0; j < temp.size(); j++) {
+					if (!ids.contains(temp.get(j))) {
+						ids.add(temp.get(j));
+					}
+				}
 			}
 		}
 		
@@ -204,11 +247,15 @@ public class LanguageDatabase {
 	public int[] doubleMetaphone(String search) {
 		ArrayList<Integer> ids = new ArrayList<Integer>();
 		ArrayList<Pair<String, Integer>> keyLevenshtein = new ArrayList<Pair<String, Integer>>();
+		ArrayList<Pair<String, Double>> keyScore = new ArrayList<Pair<String, Double>>();
+		double maxLevenshtein = 0.0d;
+		double maxSize = 0.0d;
 		
 		String search1 = dm.doubleMetaphone(search, false);
 		String search2 = dm.doubleMetaphone(search, true);
 		
-		for (String key : containsRows.keySet()) {
+		for (Entry<String, List<Integer>> kvp : containsDmRows.entrySet()) {
+			String key = kvp.getKey();
 			if (key.contains(search1)) {
 				int levenshtein = StringUtils.getLevenshteinDistance(key, search1);
 				if (key.contains(search2)) {
@@ -218,20 +265,46 @@ public class LanguageDatabase {
 					}
 				}
 				keyLevenshtein.add(new Pair<String, Integer>(key, levenshtein));
+				if (maxLevenshtein < levenshtein) {
+					maxLevenshtein = levenshtein;
+				}
+				int size = kvp.getValue().size();
+				if (maxSize < size) {
+					maxSize = size;
+				}
 			} else if (key.contains(search2)) {
-				keyLevenshtein.add(new Pair<String, Integer>(key, StringUtils.getLevenshteinDistance(key, search2)));
+				int levenshtein = StringUtils.getLevenshteinDistance(key, search2);
+				keyLevenshtein.add(new Pair<String, Integer>(key, levenshtein));
+				if (maxLevenshtein < levenshtein) {
+					maxLevenshtein = levenshtein;
+				}
+				int size = kvp.getValue().size();
+				if (maxSize < size) {
+					maxSize = size;
+				}
 			}
 		}
 		
-		keyLevenshtein.sort(new Comparator<Pair<String, Integer>>() {
+		for (int i = 0; i < keyLevenshtein.size(); i++) {
+			double score = ((double) keyLevenshtein.get(i).getRight()) / maxLevenshtein;
+			score -= (((double) containsDmRows.get(keyLevenshtein.get(i).getLeft()).size()) / maxSize) / 5.0d;
+			keyScore.add(new Pair<String, Double>(keyLevenshtein.get(i).getLeft(), score));
+		}
+		
+		keyScore.sort(new Comparator<Pair<String, Double>>() {
 			@Override
-			public int compare(Pair<String, Integer> one, Pair<String, Integer> two) {
+			public int compare(Pair<String, Double> one, Pair<String, Double> two) {
 				return one.getRight().compareTo(two.getRight());
 			}
 		});
 		
-		for (int i = 0; i < keyLevenshtein.size(); i++) {
-			ids.addAll(containsRows.get(keyLevenshtein.get(i).getLeft()));
+		for (int i = 0; i < keyScore.size(); i++) {
+			List<Integer> temp = containsDmRows.get(keyScore.get(i).getLeft());
+			for (int j = 0; j < temp.size(); j++) {
+				if (!ids.contains(temp.get(j))) {
+					ids.add(temp.get(j));
+				}
+			}
 		}
 		
 		return ids.stream().mapToInt(i -> i).toArray();

@@ -17,8 +17,14 @@ public final class Pair<L, R> {
 	public L getLeft() {
 		return left;
 	}
+	public void setLeft(L left) {
+		this.left = left;
+	}
 	public R getRight() {
 		return right;
+	}
+	public void setRight(R right) {
+		this.right = right;
 	}
 	
 	public boolean equals(Object obj) {
