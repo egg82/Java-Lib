@@ -20,6 +20,11 @@ public final class StringUtil {
 		return new String(buffer);
 	}
 	
+	public static void stripSpecialChars(List<String> list) {
+		for (int i = 0; i < list.size(); i++) {
+			list.set(i, list.get(i).replaceAll("[^a-zA-Z0-9]", ""));
+		}
+	}
 	public static void stripCommonWords(List<String> list) {
 		if (list == null || list.size() == 0) {
 			return;
