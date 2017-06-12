@@ -508,6 +508,9 @@ public class LanguageDatabase {
 	 * @return The values of the cells retrieved by row IDs and column ID
 	 */
 	public String[] getValues(int[] rowIndices, int columnIndex) {
+		if (rowIndices == null) {
+			return null;
+		}
 		if (rowIndices.length == 0 || columnIndex < 0) {
 			return new String[0];
 		}
