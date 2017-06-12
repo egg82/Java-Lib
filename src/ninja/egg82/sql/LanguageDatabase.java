@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -42,6 +43,8 @@ public class LanguageDatabase {
 		if (columns == null) {
 			throw new RuntimeException("columns cannot be null");
 		}
+		
+		columns = stripBlanksAndDuplicates(columns);
 		if (columns.length == 0) {
 			return -1;
 		}
@@ -536,5 +539,18 @@ public class LanguageDatabase {
 				kvp.setValue(value);
 			}
 		}
+	}
+	
+	private String[] stripBlanksAndDuplicates(String[] input) {
+		LinkedHashSet<String> retVal = new LinkedHashSet<String>();
+		
+		for (int i = 0; i < input.length; i++) {
+			if (input[i] == null || input[i].isEmpty()) {
+				continue;
+			}
+			retVal.add(input[i]);
+		}
+		
+		return retVal.toArray(new String[0]);
 	}
 }
