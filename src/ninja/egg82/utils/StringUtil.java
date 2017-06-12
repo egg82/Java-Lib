@@ -30,7 +30,7 @@ public final class StringUtil {
 			return;
 		}
 		
-		for (int i = list.size(); i >= 0; i--) {
+		for (int i = list.size() - 1; i >= 0; i--) {
 			String word = list.get(i);
 			if (
 				word.isEmpty()

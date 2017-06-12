@@ -176,18 +176,22 @@ public class LanguageDatabase {
 		if (caseSensitive) {
 			for (String s : searchSet) {
 				List<Integer> temp = containsRows.get(s);
-				for (int j = 0; j < temp.size(); j++) {
-					if (!ids.contains(temp.get(j))) {
-						ids.add(temp.get(j));
+				if (temp != null && temp.size() > 0) {
+					for (int j = 0; j < temp.size(); j++) {
+						if (!ids.contains(temp.get(j))) {
+							ids.add(temp.get(j));
+						}
 					}
 				}
 			}
 		} else {
 			for (String s : searchSet) {
 				List<Integer> temp = containsCiRows.get(s);
-				for (int j = 0; j < temp.size(); j++) {
-					if (!ids.contains(temp.get(j))) {
-						ids.add(temp.get(j));
+				if (temp != null && temp.size() > 0) {
+					for (int j = 0; j < temp.size(); j++) {
+						if (!ids.contains(temp.get(j))) {
+							ids.add(temp.get(j));
+						}
 					}
 				}
 			}
@@ -240,6 +244,8 @@ public class LanguageDatabase {
 		}
 		
 		HashSet<String> searchSet = new HashSet<String>(Arrays.asList(search));
+		searchSet.remove(null);
+		searchSet.remove("");
 		
 		if (caseSensitive) {
 			for (String s : searchSet) {
@@ -372,6 +378,8 @@ public class LanguageDatabase {
 		}
 		
 		HashSet<String> searchSet = new HashSet<String>(Arrays.asList(searchDm));
+		searchSet.remove(null);
+		searchSet.remove("");
 		
 		for (String s : searchSet) {
 			for (Entry<String, List<Integer>> kvp : containsDmRows.entrySet()) {
@@ -501,7 +509,7 @@ public class LanguageDatabase {
 	 */
 	public String[] getValues(int[] rowIndices, int columnIndex) {
 		if (rowIndices.length == 0 || columnIndex < 0) {
-			return null;
+			return new String[0];
 		}
 		
 		ArrayList<String> values = new ArrayList<String>();
