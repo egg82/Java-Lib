@@ -242,7 +242,7 @@ public class LanguageDatabase {
 			for (String s : searchSet) {
 				for (Entry<String, List<Integer>> kvp : containsRows.entrySet()) {
 					String key = kvp.getKey();
-					if (key.contains(s)) {
+					if (key.contains(s) || s.contains(key)) {
 						int currentDistance = StringUtils.getLevenshteinDistance(key, s);
 						keyLevenshtein.add(new Pair<String, Integer>(key, currentDistance));
 						if (maxLevenshtein < currentDistance) {
@@ -272,7 +272,7 @@ public class LanguageDatabase {
 			for (String s : searchSet) {
 				for (Entry<String, List<Integer>> kvp : containsCiRows.entrySet()) {
 					String key = kvp.getKey();
-					if (key.contains(s)) {
+					if (key.contains(s) || s.contains(key)) {
 						int currentDistance = StringUtils.getLevenshteinDistance(key, s);
 						keyLevenshtein.add(new Pair<String, Integer>(key, currentDistance));
 						if (maxLevenshtein < currentDistance) {
