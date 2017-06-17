@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>ninja.egg82.lib</groupId>
   <artifactId>egg82-lib</artifactId>
-  <version>1.2.6</version>
+  <version>1.2.7</version>
   <name>egg82-lib</name>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -47,6 +47,10 @@
                 <relocation>
                   <pattern>org.json</pattern>
                   <shadedPattern>ninja.egg82.lib.org.json</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache</pattern>
+                  <shadedPattern>ninja.egg82.lib.org.apache</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>org.reflections</pattern>
