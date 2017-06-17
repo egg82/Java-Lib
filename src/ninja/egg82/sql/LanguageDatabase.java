@@ -28,8 +28,8 @@ public class LanguageDatabase {
 	private HashMap<String, List<Integer>> containsCiRows = new HashMap<String, List<Integer>>(); // Case-insensitive version
 	private HashMap<String, List<Integer>> containsDmRows = new HashMap<String, List<Integer>>(); // There may be multiple rows with the same values, hence the list
 	
-	private LinkedHashMap<String, Pair<Integer, Integer>> containsCache = new LinkedHashMap<String, Pair<Integer, Integer>>(); // Last 1000 single-word searches
-	private LinkedHashMap<String, Pair<Integer, Integer>> dmCache = new LinkedHashMap<String, Pair<Integer, Integer>>(); // Last 1000 single-word searches
+	private LinkedHashMap<String, List<Pair<String, Pair<Integer, Integer>>>> containsCache = new LinkedHashMap<String, List<Pair<String, Pair<Integer, Integer>>>>(); // Last 1000 single-word searches
+	private LinkedHashMap<String, List<Pair<String, Pair<Integer, Integer>>>> dmCache = new LinkedHashMap<String, List<Pair<String, Pair<Integer, Integer>>>>(); // Last 1000 single-word searches
 	
 	//constructor
 	public LanguageDatabase() {
@@ -262,16 +262,18 @@ public class LanguageDatabase {
 		if (caseSensitive) {
 			for (String s : searchSet) {
 				if (containsCache.containsKey(s)) {
-					Pair<Integer, Integer> result = containsCache.get(s);
+					List<Pair<String, Pair<Integer, Integer>>> result = containsCache.get(s);
 					bumpCache(containsCache, s);
-					keyLevenshtein.add(new Pair<String, Integer>(s, result.getLeft()));
-					int currentDistance = result.getLeft();
-					if (maxLevenshtein < currentDistance) {
-						maxLevenshtein = currentDistance;
-					}
-					int size = result.getRight();
-					if (maxSize < size) {
-						maxSize = size;
+					for (int i = 0; i < result.size(); i++) {
+						keyLevenshtein.add(new Pair<String, Integer>(result.get(i).getLeft(), result.get(i).getRight().getLeft()));
+						int currentDistance = result.get(i).getRight().getLeft();
+						if (maxLevenshtein < currentDistance) {
+							maxLevenshtein = currentDistance;
+						}
+						int size = result.get(i).getRight().getRight();
+						if (maxSize < size) {
+							maxSize = size;
+						}
 					}
 				} else {
 					for (Entry<String, List<Integer>> kvp : containsRows.entrySet()) {
@@ -287,7 +289,7 @@ public class LanguageDatabase {
 								maxSize = size;
 							}
 							
-							addToCache(containsCache, s, currentDistance, size);
+							addToCache(containsCache, s, key, currentDistance, size);
 						}
 					}
 				}
@@ -308,16 +310,18 @@ public class LanguageDatabase {
 		} else {
 			for (String s : searchSet) {
 				if (containsCache.containsKey(s)) {
-					Pair<Integer, Integer> result = containsCache.get(s);
+					List<Pair<String, Pair<Integer, Integer>>> result = containsCache.get(s);
 					bumpCache(containsCache, s);
-					keyLevenshtein.add(new Pair<String, Integer>(s, result.getLeft()));
-					int currentDistance = result.getLeft();
-					if (maxLevenshtein < currentDistance) {
-						maxLevenshtein = currentDistance;
-					}
-					int size = result.getRight();
-					if (maxSize < size) {
-						maxSize = size;
+					for (int i = 0; i < result.size(); i++) {
+						keyLevenshtein.add(new Pair<String, Integer>(result.get(i).getLeft(), result.get(i).getRight().getLeft()));
+						int currentDistance = result.get(i).getRight().getLeft();
+						if (maxLevenshtein < currentDistance) {
+							maxLevenshtein = currentDistance;
+						}
+						int size = result.get(i).getRight().getRight();
+						if (maxSize < size) {
+							maxSize = size;
+						}
 					}
 				} else {
 					for (Entry<String, List<Integer>> kvp : containsCiRows.entrySet()) {
@@ -333,7 +337,7 @@ public class LanguageDatabase {
 								maxSize = size;
 							}
 							
-							addToCache(containsCache, s, currentDistance, size);
+							addToCache(containsCache, s, key, currentDistance, size);
 						}
 					}
 				}
@@ -427,16 +431,18 @@ public class LanguageDatabase {
 		
 		for (String s : searchSet) {
 			if (dmCache.containsKey(s)) {
-				Pair<Integer, Integer> result = dmCache.get(s);
+				List<Pair<String, Pair<Integer, Integer>>> result = dmCache.get(s);
 				bumpCache(dmCache, s);
-				keyLevenshtein.add(new Pair<String, Integer>(s, result.getLeft()));
-				int currentDistance = result.getLeft();
-				if (maxLevenshtein < currentDistance) {
-					maxLevenshtein = currentDistance;
-				}
-				int size = result.getRight();
-				if (maxSize < size) {
-					maxSize = size;
+				for (int i = 0; i < result.size(); i++) {
+					keyLevenshtein.add(new Pair<String, Integer>(result.get(i).getLeft(), result.get(i).getRight().getLeft()));
+					int currentDistance = result.get(i).getRight().getLeft();
+					if (maxLevenshtein < currentDistance) {
+						maxLevenshtein = currentDistance;
+					}
+					int size = result.get(i).getRight().getRight();
+					if (maxSize < size) {
+						maxSize = size;
+					}
 				}
 			} else {
 				for (Entry<String, List<Integer>> kvp : containsDmRows.entrySet()) {
@@ -452,7 +458,7 @@ public class LanguageDatabase {
 							maxSize = size;
 						}
 						
-						addToCache(dmCache, s, currentDistance, size);
+						addToCache(dmCache, s, key, currentDistance, size);
 					}
 				}
 			}
@@ -612,16 +618,21 @@ public class LanguageDatabase {
 		}
 	}
 	
-	private void bumpCache(Map<String, Pair<Integer, Integer>> cache, String key) {
-		Pair<Integer, Integer> value = cache.get(key);
+	private void bumpCache(Map<String, List<Pair<String, Pair<Integer, Integer>>>> cache, String key) {
+		List<Pair<String, Pair<Integer, Integer>>> value = cache.get(key);
 		cache.remove(key);
 		cache.put(key, value);
 	}
-	private void addToCache(Map<String, Pair<Integer, Integer>> cache, String key, Integer distance, Integer size) {
-		if (cache.size() >= 1000) {
-			cache.remove(cache.entrySet().iterator().next().getKey());
+	private void addToCache(Map<String, List<Pair<String, Pair<Integer, Integer>>>> cache, String key, String dbKey, Integer distance, Integer size) {
+		if (cache.containsKey(key)) {
+			List<Pair<String, Pair<Integer, Integer>>> value = cache.get(key);
+			value.add(new Pair<String, Pair<Integer, Integer>>(dbKey, new Pair<Integer, Integer>(distance, size)));
+		} else {
+			if (cache.size() >= 1000) {
+				cache.remove(cache.entrySet().iterator().next().getKey());
+			}
+			cache.put(key, new ArrayList<Pair<String, Pair<Integer, Integer>>>(Arrays.asList(new Pair<String, Pair<Integer, Integer>>(dbKey, new Pair<Integer, Integer>(distance, size)))));
 		}
-		cache.put(key, new Pair<Integer, Integer>(distance, size));
 	}
 	
 	private String[] stripBlanksAndDuplicates(String[] input) {
