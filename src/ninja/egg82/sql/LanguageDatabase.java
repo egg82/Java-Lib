@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,9 @@ public class LanguageDatabase {
 	private HashMap<String, List<Integer>> containsRows = new HashMap<String, List<Integer>>(); // Needed for fast exact & contains matches
 	private HashMap<String, List<Integer>> containsCiRows = new HashMap<String, List<Integer>>(); // Case-insensitive version
 	private HashMap<String, List<Integer>> containsDmRows = new HashMap<String, List<Integer>>(); // There may be multiple rows with the same values, hence the list
+	
+	private LinkedHashMap<String, Pair<Integer, Integer>> containsCache = new LinkedHashMap<String, Pair<Integer, Integer>>(); // Last 1000 single-word searches
+	private LinkedHashMap<String, Pair<Integer, Integer>> dmCache = new LinkedHashMap<String, Pair<Integer, Integer>>(); // Last 1000 single-word searches
 	
 	//constructor
 	public LanguageDatabase() {
@@ -97,6 +101,9 @@ public class LanguageDatabase {
 			}
 		}
 		
+		containsCache.clear();
+		dmCache.clear();
+		
 		return index;
 	}
 	/**
@@ -112,6 +119,9 @@ public class LanguageDatabase {
 		removeFromMap(containsRows, rowIndex);
 		removeFromMap(containsCiRows, rowIndex);
 		removeFromMap(containsDmRows, rowIndex);
+		
+		containsCache.clear();
+		dmCache.clear();
 	}
 	/**
 	 * Returns the number of rows currently in the database.
@@ -172,6 +182,8 @@ public class LanguageDatabase {
 		}
 		
 		HashSet<String> searchSet = new HashSet<String>(Arrays.asList(search));
+		searchSet.remove(null);
+		searchSet.remove("");
 		
 		if (caseSensitive) {
 			for (String s : searchSet) {
@@ -249,17 +261,33 @@ public class LanguageDatabase {
 		
 		if (caseSensitive) {
 			for (String s : searchSet) {
-				for (Entry<String, List<Integer>> kvp : containsRows.entrySet()) {
-					String key = kvp.getKey();
-					if (key.contains(s) || s.contains(key)) {
-						int currentDistance = StringUtils.getLevenshteinDistance(key, s);
-						keyLevenshtein.add(new Pair<String, Integer>(key, currentDistance));
-						if (maxLevenshtein < currentDistance) {
-							maxLevenshtein = currentDistance;
-						}
-						int size = kvp.getValue().size();
-						if (maxSize < size) {
-							maxSize = size;
+				if (containsCache.containsKey(s)) {
+					Pair<Integer, Integer> result = containsCache.get(s);
+					bumpCache(containsCache, s);
+					keyLevenshtein.add(new Pair<String, Integer>(s, result.getLeft()));
+					int currentDistance = result.getLeft();
+					if (maxLevenshtein < currentDistance) {
+						maxLevenshtein = currentDistance;
+					}
+					int size = result.getRight();
+					if (maxSize < size) {
+						maxSize = size;
+					}
+				} else {
+					for (Entry<String, List<Integer>> kvp : containsRows.entrySet()) {
+						String key = kvp.getKey();
+						if (key.contains(s) || s.contains(key)) {
+							int currentDistance = StringUtils.getLevenshteinDistance(key, s);
+							keyLevenshtein.add(new Pair<String, Integer>(key, currentDistance));
+							if (maxLevenshtein < currentDistance) {
+								maxLevenshtein = currentDistance;
+							}
+							int size = kvp.getValue().size();
+							if (maxSize < size) {
+								maxSize = size;
+							}
+							
+							addToCache(containsCache, s, currentDistance, size);
 						}
 					}
 				}
@@ -279,17 +307,33 @@ public class LanguageDatabase {
 			}
 		} else {
 			for (String s : searchSet) {
-				for (Entry<String, List<Integer>> kvp : containsCiRows.entrySet()) {
-					String key = kvp.getKey();
-					if (key.contains(s) || s.contains(key)) {
-						int currentDistance = StringUtils.getLevenshteinDistance(key, s);
-						keyLevenshtein.add(new Pair<String, Integer>(key, currentDistance));
-						if (maxLevenshtein < currentDistance) {
-							maxLevenshtein = currentDistance;
-						}
-						int size = kvp.getValue().size();
-						if (maxSize < size) {
-							maxSize = size;
+				if (containsCache.containsKey(s)) {
+					Pair<Integer, Integer> result = containsCache.get(s);
+					bumpCache(containsCache, s);
+					keyLevenshtein.add(new Pair<String, Integer>(s, result.getLeft()));
+					int currentDistance = result.getLeft();
+					if (maxLevenshtein < currentDistance) {
+						maxLevenshtein = currentDistance;
+					}
+					int size = result.getRight();
+					if (maxSize < size) {
+						maxSize = size;
+					}
+				} else {
+					for (Entry<String, List<Integer>> kvp : containsCiRows.entrySet()) {
+						String key = kvp.getKey();
+						if (key.contains(s) || s.contains(key)) {
+							int currentDistance = StringUtils.getLevenshteinDistance(key, s);
+							keyLevenshtein.add(new Pair<String, Integer>(key, currentDistance));
+							if (maxLevenshtein < currentDistance) {
+								maxLevenshtein = currentDistance;
+							}
+							int size = kvp.getValue().size();
+							if (maxSize < size) {
+								maxSize = size;
+							}
+							
+							addToCache(containsCache, s, currentDistance, size);
 						}
 					}
 				}
@@ -382,17 +426,33 @@ public class LanguageDatabase {
 		searchSet.remove("");
 		
 		for (String s : searchSet) {
-			for (Entry<String, List<Integer>> kvp : containsDmRows.entrySet()) {
-				String key = kvp.getKey();
-				if (key.contains(s)) {
-					int levenshtein = StringUtils.getLevenshteinDistance(key, s);
-					keyLevenshtein.add(new Pair<String, Integer>(key, levenshtein));
-					if (maxLevenshtein < levenshtein) {
-						maxLevenshtein = levenshtein;
-					}
-					int size = kvp.getValue().size();
-					if (maxSize < size) {
-						maxSize = size;
+			if (dmCache.containsKey(s)) {
+				Pair<Integer, Integer> result = dmCache.get(s);
+				bumpCache(dmCache, s);
+				keyLevenshtein.add(new Pair<String, Integer>(s, result.getLeft()));
+				int currentDistance = result.getLeft();
+				if (maxLevenshtein < currentDistance) {
+					maxLevenshtein = currentDistance;
+				}
+				int size = result.getRight();
+				if (maxSize < size) {
+					maxSize = size;
+				}
+			} else {
+				for (Entry<String, List<Integer>> kvp : containsDmRows.entrySet()) {
+					String key = kvp.getKey();
+					if (key.contains(s)) {
+						int currentDistance = StringUtils.getLevenshteinDistance(key, s);
+						keyLevenshtein.add(new Pair<String, Integer>(key, currentDistance));
+						if (maxLevenshtein < currentDistance) {
+							maxLevenshtein = currentDistance;
+						}
+						int size = kvp.getValue().size();
+						if (maxSize < size) {
+							maxSize = size;
+						}
+						
+						addToCache(dmCache, s, currentDistance, size);
 					}
 				}
 			}
@@ -550,6 +610,18 @@ public class LanguageDatabase {
 				kvp.setValue(value);
 			}
 		}
+	}
+	
+	private void bumpCache(Map<String, Pair<Integer, Integer>> cache, String key) {
+		Pair<Integer, Integer> value = cache.get(key);
+		cache.remove(key);
+		cache.put(key, value);
+	}
+	private void addToCache(Map<String, Pair<Integer, Integer>> cache, String key, Integer distance, Integer size) {
+		if (cache.size() >= 1000) {
+			cache.remove(cache.entrySet().iterator().next().getKey());
+		}
+		cache.put(key, new Pair<Integer, Integer>(distance, size));
 	}
 	
 	private String[] stripBlanksAndDuplicates(String[] input) {
