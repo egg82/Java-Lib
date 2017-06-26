@@ -6,7 +6,7 @@ import java.util.ArrayList;
 
 import javax.swing.Timer;
 
-public abstract class Command {
+public abstract class Command implements IEventDispatcher {
 	//vars
 	public static final ArrayList<Observer> OBSERVERS = new ArrayList<Observer>();
 	
@@ -42,6 +42,10 @@ public abstract class Command {
 		}
 	}
 	
+	public final void dispatch(String event, Object data) {
+		Observer.dispatch(OBSERVERS, this, event, data);
+	}
+	
 	//private
 	protected abstract void onExecute(long elapsedMilliseconds);
 	
@@ -50,7 +54,4 @@ public abstract class Command {
 			onExecute(System.currentTimeMillis() - startTime);
 		}
 	};
-	protected final void dispatch(String event, Object data) {
-		Observer.dispatch(OBSERVERS, this, event, data);
-	}
 }

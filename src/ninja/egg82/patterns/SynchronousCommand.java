@@ -2,7 +2,7 @@ package ninja.egg82.patterns;
 
 import java.util.ArrayList;
 
-public abstract class SynchronousCommand {
+public abstract class SynchronousCommand implements IEventDispatcher {
 	//vars
 	public static final ArrayList<Observer> OBSERVERS = new ArrayList<Observer>();
 	
@@ -25,7 +25,7 @@ public abstract class SynchronousCommand {
 	
 	//public
 	public final void start() {
-		if (timer == 0) {
+		if (timer != 0) {
 			startTime = System.currentTimeMillis();
 			try {
 				Thread.sleep(timer);
@@ -38,10 +38,10 @@ public abstract class SynchronousCommand {
 		}
 	}
 	
-	//private
-	protected abstract void onExecute(long elapsedMilliseconds);
-	
-	protected final void dispatch(String event, Object data) {
+	public final void dispatch(String event, Object data) {
 		Observer.dispatch(OBSERVERS, this, event, data);
 	}
+	
+	//private
+	protected abstract void onExecute(long elapsedMilliseconds);
 }
