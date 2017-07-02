@@ -112,6 +112,10 @@ public class LanguageDatabase {
 	 * @param rowIndex The row ID to retrieve
 	 */
 	public void removeRow(int rowIndex) {
+		if (rowIndex < 0 || rowIndex >= rows.size()) {
+			return;
+		}
+		
 		rows.remove(rowIndex);
 		ciRows.remove(rowIndex);
 		dmRows.remove(rowIndex);
@@ -211,7 +215,7 @@ public class LanguageDatabase {
 		
 		Collections.sort(ids);
 		
-		return (ids != null) ? ids.stream().mapToInt(i -> i).toArray() : new int[0];
+		return ids.stream().mapToInt(i -> i).toArray();
 	}
 	/**
 	 * Returns the row IDs of any substring matches and sorts the results by a relevance score descending and ID ascending
