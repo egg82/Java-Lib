@@ -137,6 +137,8 @@ public final class ReflectUtil {
 			throw new IllegalArgumentException("pkg cannot be null.");
 		}
 		
+		Reflections.log = null;
+		
 		if (pkg.lastIndexOf('.') != pkg.length() - 1) {
 			pkg = pkg + ".";
 		}
