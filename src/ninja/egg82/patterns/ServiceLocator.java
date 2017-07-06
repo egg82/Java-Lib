@@ -39,7 +39,7 @@ public final class ServiceLocator {
 		if (result == null) {
 			for (int i = 0; i < services.size(); i++) {
 				Class<?> c = services.get(i);
-				if (ReflectUtil.doesExtend(c, clazz)) {
+				if (ReflectUtil.doesExtend(clazz, c)) {
 					result = initializedServices.get(c);
 					if (result == null) {
 						result = initializeService(c);
@@ -63,7 +63,7 @@ public final class ServiceLocator {
 		
 		// Destroy any existing services and cache
 		initializedServices.remove(clazz);
-		lookupCache.entrySet().removeIf(v -> ReflectUtil.doesExtend(v.getValue().getClass(), clazz));
+		lookupCache.entrySet().removeIf(v -> ReflectUtil.doesExtend(clazz, v.getValue().getClass()));
 		
 		int index = services.indexOf(clazz);
 		if (index > -1) {
@@ -90,12 +90,12 @@ public final class ServiceLocator {
 		if (result == null) {
 			for (int i = 0; i < services.size(); i++) {
 				Class<?> c = services.get(i);
-				if (ReflectUtil.doesExtend(c, clazz)) {
+				if (ReflectUtil.doesExtend(clazz, c)) {
 					result = initializedServices.get(c);
 					if (result != null) {
 						initializedServices.remove(clazz);
 					}
-					lookupCache.entrySet().removeIf(v -> ReflectUtil.doesExtend(v.getValue().getClass(), clazz));
+					lookupCache.entrySet().removeIf(v -> ReflectUtil.doesExtend(clazz, v.getValue().getClass()));
 					services.remove(i);
 					return;
 				}

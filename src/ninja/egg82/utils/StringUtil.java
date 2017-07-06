@@ -140,6 +140,16 @@ public final class StringUtil {
 		}
 	}
 	
+	public static String repeatChar(char character, int length) {
+		StringBuffer retVal = new StringBuffer(length);
+		
+		for (int i = 0; i < length; i++) {
+			retVal.append(character);
+		}
+		
+		return retVal.toString();
+	}
+	
 	//private
 	
 }

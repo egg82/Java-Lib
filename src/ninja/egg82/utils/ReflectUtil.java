@@ -188,7 +188,7 @@ public final class ReflectUtil {
 			return false;
 		}
 		
-		return classToTest == baseClass || classToTest.isAssignableFrom(baseClass);
+		return classToTest == baseClass || baseClass.isAssignableFrom(classToTest);
 	}
 	
 	//private
