@@ -2,6 +2,8 @@ package ninja.egg82.patterns;
 
 import java.util.HashMap;
 
+import ninja.egg82.utils.ReflectUtil;
+
 public class Registry implements IRegistry {
 	//vars
 	private String[] keyCache = new String[0];
@@ -28,7 +30,7 @@ public class Registry implements IRegistry {
 				keysDirty = true;
 			}
 		} else {
-			if (data.getClass() != type) {
+			if (!ReflectUtil.doesExtend(type, data.getClass())) {
 				try {
 					data = type.cast(data);
 				} catch (Exception ex) {
@@ -58,6 +60,28 @@ public class Registry implements IRegistry {
 		
 		if (result != null) {
 			return result.getRight();
+		}
+		return null;
+	}
+	@SuppressWarnings("unchecked")
+	public final synchronized <T> T getRegister(String name, Class<T> type) {
+		if (name == null) {
+			throw new IllegalArgumentException("name cannot be null.");
+		}
+		
+		Pair<Class<?>, Object> result = registry.get(name);
+		
+		if (result != null) {
+			Object data = result.getRight();
+			if (!ReflectUtil.doesExtend(type, data.getClass())) {
+				try {
+					return type.cast(data);
+				} catch (Exception ex) {
+					throw new RuntimeException("data type cannot be converted to the type specified.", ex);
+				}
+			} else {
+				return (T) data;
+			}
 		}
 		return null;
 	}

@@ -4,6 +4,7 @@ public interface IRegistry {
 	//functions
 	void setRegister(String name, Class<?> type, Object data);
 	Object getRegister(String name);
+	<T> T getRegister(String name, Class<T> type);
 	String getName(Object data);
 	Class<?> getRegisterClass(String name);
 	

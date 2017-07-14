@@ -17,7 +17,8 @@ public final class ServiceLocator {
 	}
 	
 	//public
-	public synchronized static Object getService(Class<?> clazz) {
+	@SuppressWarnings("unchecked")
+	public synchronized static <T> T getService(Class<T> clazz) {
 		if (clazz == null) {
 			throw new IllegalArgumentException("clazz cannot be null.");
 		}
@@ -51,7 +52,7 @@ public final class ServiceLocator {
 			}
 		}
 		
-		return result;
+		return (T) result;
 	}
 	public synchronized static void provideService(Class<?> clazz) {
 		provideService(clazz, true);
