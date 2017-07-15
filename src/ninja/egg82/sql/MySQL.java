@@ -49,10 +49,10 @@ public class MySQL implements ISQL {
 	}
 	public void connect(String address, short port, String user, String pass, String dbName) {
 		if (address == null || address.isEmpty()) {
-			throw new RuntimeException("address cannot be null or empty.");
+			throw new IllegalArgumentException("address cannot be null or empty.");
 		}
 		if (port <= 0) {
-			throw new RuntimeException("port cannot be <= 0.");
+			throw new IllegalArgumentException("port cannot be <= 0.");
 		}
 		
 		try {
@@ -103,7 +103,7 @@ public class MySQL implements ISQL {
 	
 	public UUID query(String q, Object... queryParams) {
 		if (q == null || q.isEmpty()) {
-			throw new RuntimeException("q cannot be null or empty.");
+			throw new IllegalArgumentException("q cannot be null or empty.");
 		}
 		
 		UUID u = UUID.randomUUID();

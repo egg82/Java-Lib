@@ -2,6 +2,7 @@ package ninja.egg82.patterns;
 
 import java.util.ArrayDeque;
 
+import ninja.egg82.exceptions.ArgumentNullException;
 import ninja.egg82.patterns.prototypes.IPrototype;
 
 public final class ObjectPool<T extends IPrototype> {
@@ -16,7 +17,7 @@ public final class ObjectPool<T extends IPrototype> {
 	}
 	public ObjectPool(T masterInstance, int numInstances, boolean isDynamic) {
 		if (masterInstance == null) {
-			throw new IllegalArgumentException("masterInstance cannot be null.");
+			throw new ArgumentNullException("masterInstance");
 		}
 		if (numInstances < 0) {
 			numInstances = 0;
@@ -41,7 +42,7 @@ public final class ObjectPool<T extends IPrototype> {
 	}
 	public void returnObject(T obj) {
 		if (obj == null) {
-			throw new IllegalArgumentException("obj cannot be null.");
+			throw new ArgumentNullException("obj");
 		}
 		pool.add(obj);
 	}

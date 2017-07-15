@@ -2,6 +2,8 @@ package ninja.egg82.patterns.states;
 
 import java.util.ArrayList;
 
+import ninja.egg82.exceptions.ArgumentNullException;
+
 public abstract class FiniteState {
 	//vars
 	private ArrayList<Class<?>> exitStates = new ArrayList<Class<?>>();
@@ -10,7 +12,7 @@ public abstract class FiniteState {
 	//constructor
 	public FiniteState(FiniteStateMachine machine) {
 		if (machine == null) {
-			throw new IllegalArgumentException("machine cannot be null.");
+			throw new ArgumentNullException("machine");
 		}
 		this.finiteStateMachine = machine;
 	}
@@ -21,7 +23,7 @@ public abstract class FiniteState {
 	
 	public final void addExitState(Class<?> state) {
 		if (state == null) {
-			throw new IllegalArgumentException("state cannot be null.");
+			throw new ArgumentNullException("state");
 		}
 		if (!exitStates.contains(state)) {
 			exitStates.add(state);
@@ -29,13 +31,13 @@ public abstract class FiniteState {
 	}
 	public final void removeExitState(Class<?> state) {
 		if (state == null) {
-			throw new IllegalArgumentException("state cannot be null.");
+			throw new ArgumentNullException("state");
 		}
 		exitStates.remove(state);
 	}
 	public final boolean hasExitState(Class<?> state) {
 		if (state == null) {
-			throw new IllegalArgumentException("state cannot be null.");
+			throw new ArgumentNullException("state");
 		}
 		return exitStates.contains(state);
 	}

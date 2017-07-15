@@ -15,6 +15,7 @@ import java.util.Map.Entry;
 import org.apache.commons.codec.language.DoubleMetaphone;
 import org.apache.commons.lang3.StringUtils;
 
+import ninja.egg82.exceptions.ArgumentNullException;
 import ninja.egg82.patterns.tuples.Pair;
 
 public class LanguageDatabase {
@@ -47,7 +48,7 @@ public class LanguageDatabase {
 	 */
 	public int addRow(String... columns) {
 		if (columns == null) {
-			throw new RuntimeException("columns cannot be null");
+			throw new ArgumentNullException("columns");
 		}
 		
 		columns = stripBlanksAndDuplicates(columns);

@@ -3,6 +3,8 @@ package ninja.egg82.patterns.events;
 import java.util.ArrayList;
 import java.util.function.BiFunction;
 
+import ninja.egg82.exceptions.ArgumentNullException;
+
 public class EventHandler<T extends EventArgs> {
 	//vars
 	private ArrayList<BiFunction<Object, T, Void>> listeners = new ArrayList<BiFunction<Object, T, Void>>();
@@ -15,7 +17,7 @@ public class EventHandler<T extends EventArgs> {
 	//public
 	public synchronized void attach(BiFunction<Object, T, Void> listener) {
 		if (listener == null) {
-			throw new IllegalArgumentException("listener cannot be null.");
+			throw new ArgumentNullException("listener");
 		}
 		if (listeners.contains(listener)) {
 			return;
@@ -24,7 +26,7 @@ public class EventHandler<T extends EventArgs> {
 	}
 	public synchronized void detatch(BiFunction<Object, T, Void> listener) {
 		if (listener == null) {
-			throw new IllegalArgumentException("listener cannot be null.");
+			throw new ArgumentNullException("listener");
 		}
 		listeners.remove(listener);
 	}
@@ -37,7 +39,7 @@ public class EventHandler<T extends EventArgs> {
 			try {
 				func.apply(sender, args);
 			} catch (Exception ex) {
-				throw new RuntimeException("Could not invoke listener", ex);
+				throw new RuntimeException("Could not invoke listener.", ex);
 			}
 		}
 	}

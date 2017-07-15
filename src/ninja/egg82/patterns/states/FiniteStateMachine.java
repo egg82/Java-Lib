@@ -2,6 +2,8 @@ package ninja.egg82.patterns.states;
 
 import java.util.HashMap;
 
+import ninja.egg82.exceptions.ArgumentNullException;
+
 public final class FiniteStateMachine {
 	//vars
 	private FiniteState currentState = null;
@@ -15,7 +17,7 @@ public final class FiniteStateMachine {
 	//public
 	public void addState(Class<FiniteState> state) {
 		if (state == null) {
-			throw new IllegalArgumentException("state cannot be null.");
+			throw new ArgumentNullException("state");
 		}
 		
 		FiniteState ns = null;
@@ -40,20 +42,20 @@ public final class FiniteStateMachine {
 	}
 	public boolean hasState(Class<FiniteState> state) {
 		if (state == null) {
-			throw new IllegalArgumentException("state cannot be null.");
+			throw new ArgumentNullException("state");
 		}
 		return states.containsKey(state);
 	}
 	public void removeState(Class<FiniteState> state) {
 		if (state == null) {
-			throw new IllegalArgumentException("state cannot be null.");
+			throw new ArgumentNullException("state");
 		}
 		states.remove(state);
 	}
 	
 	public boolean trySwapStates(Class<FiniteState> state) {
 		if (state == null) {
-			throw new IllegalArgumentException("state cannot be null.");
+			throw new ArgumentNullException("state");
 		}
 		if (currentState == null || !states.containsKey(state) || !currentState.hasExitState(state)) {
 			return false;

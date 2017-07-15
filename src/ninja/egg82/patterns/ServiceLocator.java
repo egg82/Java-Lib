@@ -3,6 +3,7 @@ package ninja.egg82.patterns;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import ninja.egg82.exceptions.ArgumentNullException;
 import ninja.egg82.utils.ReflectUtil;
 
 public final class ServiceLocator {
@@ -20,7 +21,7 @@ public final class ServiceLocator {
 	@SuppressWarnings("unchecked")
 	public synchronized static <T> T getService(Class<T> clazz) {
 		if (clazz == null) {
-			throw new IllegalArgumentException("clazz cannot be null.");
+			throw new ArgumentNullException("clazz");
 		}
 		
 		Object result = initializedServices.get(clazz);
@@ -59,7 +60,7 @@ public final class ServiceLocator {
 	}
 	public synchronized static void provideService(Class<?> clazz, boolean lazyInitialize) {
 		if (clazz == null) {
-			throw new IllegalArgumentException("clazz cannot be null.");
+			throw new ArgumentNullException("clazz");
 		}
 		
 		// Destroy any existing services and cache
@@ -79,7 +80,7 @@ public final class ServiceLocator {
 	}
 	public synchronized static void removeService(Class<?> clazz) {
 		if (clazz == null) {
-			throw new IllegalArgumentException("clazz cannot be null.");
+			throw new ArgumentNullException("clazz");
 		}
 		
 		Object result = initializedServices.get(clazz);

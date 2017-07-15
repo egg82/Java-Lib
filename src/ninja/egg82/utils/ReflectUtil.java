@@ -19,6 +19,8 @@ import org.reflections.util.FilterBuilder;
 
 import com.google.common.collect.Sets;
 
+import ninja.egg82.exceptions.ArgumentNullException;
+
 public final class ReflectUtil {
 	//vars
 	
@@ -109,7 +111,7 @@ public final class ReflectUtil {
 	
 	public static Object[] getStaticFields(Class<?> c) {
 		if (c == null) {
-			throw new IllegalArgumentException("c cannot be null.");
+			throw new ArgumentNullException("c");
 		}
 		
 		Field[] fields = c.getDeclaredFields();
@@ -131,10 +133,10 @@ public final class ReflectUtil {
 	@SuppressWarnings("unchecked")
 	public static <T> List<Class<? extends T>> getClasses(Class<T> clazz, String pkg) {
 		if (clazz == null) {
-			throw new IllegalArgumentException("clazz cannot be null.");
+			throw new ArgumentNullException("clazz");
 		}
 		if (pkg == null) {
-			throw new IllegalArgumentException("pkg cannot be null.");
+			throw new ArgumentNullException("pkg");
 		}
 		
 		Reflections.log = null;

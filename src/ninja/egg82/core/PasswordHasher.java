@@ -1,6 +1,6 @@
 // Shamelessly stolen from https://github.com/Mollom/phpass-java under MIT license
 
-package ninja.egg82.utils;
+package ninja.egg82.core;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -12,9 +12,9 @@ import java.util.logging.Logger;
 /**
  * Generates and verifies password hashes.
  */
-class PasswordHasher {
+public final class PasswordHasher {
 
-  private static final Logger logger = Logger.getLogger("ninja.egg82.utils");
+  private static final Logger logger = Logger.getLogger("ninja.egg82.core");
 
   /**
    * Non-standard compliant Base64 character mapping.

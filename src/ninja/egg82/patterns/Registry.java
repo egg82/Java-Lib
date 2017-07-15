@@ -2,6 +2,7 @@ package ninja.egg82.patterns;
 
 import java.util.HashMap;
 
+import ninja.egg82.exceptions.ArgumentNullException;
 import ninja.egg82.patterns.tuples.Pair;
 import ninja.egg82.utils.ReflectUtil;
 
@@ -20,41 +21,48 @@ public class Registry implements IRegistry {
 	//public
 	public final synchronized void setRegister(String name, Class<?> type, Object data) {
 		if (name == null) {
-			throw new IllegalArgumentException("name cannot be null.");
+			throw new ArgumentNullException("name");
+		}
+		if (type == null) {
+			throw new ArgumentNullException("type");
 		}
 		
-		if (data == null) {
-			Pair<Class<?>, Object> pair = registry.get(name);
-			if (pair != null) {
-				registry.remove(name);
-				reverseRegistry.remove(pair.getRight());
-				keysDirty = true;
-			}
-		} else {
-			if (!ReflectUtil.doesExtend(type, data.getClass())) {
-				try {
-					data = type.cast(data);
-				} catch (Exception ex) {
-					throw new RuntimeException("data type cannot be converted to the type specified.", ex);
-				}
-			}
-			
-			Pair<Class<?>, Object> pair = registry.get(name);
-			registry.put(name, new Pair<Class<?>, Object>(type, data));
-			reverseRegistry.put(data, name);
-			
-			if (pair == null) {
-				// Key didn't exist before. Added.
-				keysDirty = true;
-			} else {
-				// Key existed before. Need to remove old value->key from reverse registry.
-				reverseRegistry.remove(pair.getRight());
+		if (!ReflectUtil.doesExtend(type, data.getClass())) {
+			try {
+				data = type.cast(data);
+			} catch (Exception ex) {
+				throw new RuntimeException("data type cannot be converted to the type specified.", ex);
 			}
 		}
+		
+		Pair<Class<?>, Object> pair = registry.get(name);
+		registry.put(name, new Pair<Class<?>, Object>(type, data));
+		reverseRegistry.put(data, name);
+		
+		if (pair == null) {
+			// Key didn't exist before. Added.
+			keysDirty = true;
+		} else {
+			// Key existed before. Need to remove old value->key from reverse registry.
+			reverseRegistry.remove(pair.getRight());
+		}
 	}
+	public final synchronized void removeRegister(String name) {
+		if (name == null) {
+			throw new ArgumentNullException("name");
+		}
+		
+		Pair<Class<?>, Object> pair = registry.get(name);
+		if (pair != null) {
+			registry.remove(name);
+			reverseRegistry.remove(pair.getRight());
+			keysDirty = true;
+		}
+	}
+	
 	public final synchronized Object getRegister(String name) {
 		if (name == null) {
-			throw new IllegalArgumentException("name cannot be null.");
+			throw new ArgumentNullException("name");
 		}
 		
 		Pair<Class<?>, Object> result = registry.get(name);
@@ -67,13 +75,19 @@ public class Registry implements IRegistry {
 	@SuppressWarnings("unchecked")
 	public final synchronized <T> T getRegister(String name, Class<T> type) {
 		if (name == null) {
-			throw new IllegalArgumentException("name cannot be null.");
+			throw new ArgumentNullException("name");
+		}
+		if (type == null) {
+			throw new ArgumentNullException("type");
 		}
 		
 		Pair<Class<?>, Object> result = registry.get(name);
 		
 		if (result != null) {
 			Object data = result.getRight();
+			if (data == null) {
+				return null;
+			}
 			if (!ReflectUtil.doesExtend(type, data.getClass())) {
 				try {
 					return type.cast(data);
@@ -87,14 +101,11 @@ public class Registry implements IRegistry {
 		return null;
 	}
 	public final synchronized String getName(Object data) {
-		if (data == null) {
-			throw new IllegalArgumentException("data cannot be null.");
-		}
 		return reverseRegistry.get(data);
 	}
 	public final synchronized Class<?> getRegisterClass(String name) {
 		if (name == null) {
-			throw new IllegalArgumentException("name cannot be null.");
+			throw new ArgumentNullException("name");
 		}
 		
 		Pair<Class<?>, Object> result = registry.get(name);
@@ -112,9 +123,6 @@ public class Registry implements IRegistry {
 		return registry.containsKey(name);
 	}
 	public final synchronized boolean hasValue(Object data) {
-		if (data == null) {
-			return false;
-		}
 		return reverseRegistry.containsKey(data);
 	}
 	

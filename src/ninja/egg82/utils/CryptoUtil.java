@@ -23,6 +23,8 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
 import org.bouncycastle.util.encoders.Base64;
 
+import ninja.egg82.core.PasswordHasher;
+
 public final class CryptoUtil implements ICryptoUtil {
 	//vars
 	private MD5Digest md5 = new MD5Digest();

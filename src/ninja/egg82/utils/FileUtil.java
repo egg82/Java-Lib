@@ -7,6 +7,9 @@ import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
+
+import ninja.egg82.exceptions.ArgumentNullException;
+
 import java.util.Set;
 
 public final class FileUtil {
@@ -63,7 +66,7 @@ public final class FileUtil {
     		return;
     	}
     	if (pathIsFile(path)) {
-    		throw new RuntimeException("Path is not a directory");
+    		throw new RuntimeException("Path is not a directory.");
     	}
     	
     	File d = new File(path);
@@ -129,7 +132,7 @@ public final class FileUtil {
     
     public synchronized static void open(String path) throws Exception {
     	if (path == null) {
-    		throw new IllegalArgumentException("path cannot be null.");
+    		throw new ArgumentNullException("path");
     	}
     	if (!pathExists(path)) {
     		throw new RuntimeException("Path does not exist.");
@@ -147,7 +150,7 @@ public final class FileUtil {
     }
     public synchronized static void close(String path) throws Exception {
     	if (path == null) {
-    		throw new IllegalArgumentException("path cannot be null.");
+    		throw new ArgumentNullException("path");
     	}
     	if (!inStreams.containsKey(path)) {
     		return;
@@ -181,11 +184,7 @@ public final class FileUtil {
     }
     
     public synchronized static boolean isOpen(String path) {
-    	if (path == null) {
-    		throw new IllegalArgumentException("path cannot be null.");
-    	}
-    	
-    	return (inStreams.containsKey(path)) ? true : false;
+    	return (path != null && inStreams.containsKey(path)) ? true : false;
     }
     
     public synchronized static byte[] read(String path, long position) throws Exception {
@@ -193,7 +192,7 @@ public final class FileUtil {
     }
     public synchronized static byte[] read(String path, long position, long length) throws Exception {
     	if (path == null) {
-    		throw new IllegalArgumentException("path cannot be null.");
+    		throw new ArgumentNullException("path");
     	}
     	if (!inStreams.containsKey(path)) {
     		throw new RuntimeException("File is not open.");
@@ -221,7 +220,7 @@ public final class FileUtil {
     	}
     	
     	if (path == null) {
-    		throw new IllegalArgumentException("path cannot be null.");
+    		throw new ArgumentNullException("path");
     	}
     	if (!outStreams.containsKey(path)) {
     		throw new RuntimeException("File is not open.");
@@ -239,7 +238,7 @@ public final class FileUtil {
     
     public synchronized static void erase(String path) throws Exception {
     	if (path == null) {
-    		throw new IllegalArgumentException("path cannot be null.");
+    		throw new ArgumentNullException("path");
     	}
     	
     	if (outStreams.containsKey(path)) {

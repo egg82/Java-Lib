@@ -53,7 +53,7 @@ public class SQLite implements ISQL {
 	}
 	public void connect(String filePath) {
 		if (filePath == null || filePath.isEmpty()) {
-			throw new RuntimeException("filePath cannot be null or empty.");
+			throw new IllegalArgumentException("filePath cannot be null or empty.");
 		}
 		
 		if (FileUtil.pathExists(filePath)) {
