@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>ninja.egg82.lib</groupId>
   <artifactId>egg82-lib</artifactId>
-  <version>1.4.11</version>
+  <version>1.5.11</version>
   <name>egg82-lib</name>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -64,6 +64,18 @@
                   <pattern>javassist</pattern>
                   <shadedPattern>ninja.egg82.lib.javassist</shadedPattern>
                 </relocation>
+                <relocation>
+                  <pattern>java.sql</pattern>
+                  <shadedPattern>ninja.egg82.lib.java.sql</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.sqlite</pattern>
+                  <shadedPattern>ninja.egg82.lib.org.sqlite</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.mysql</pattern>
+                  <shadedPattern>ninja.egg82.lib.com.mysql</shadedPattern>
+                </relocation>
               </relocations>
             </configuration>
           </execution>
@@ -107,11 +119,21 @@
       <version>1.56</version>
     </dependency>
     <dependency>
-	    <groupId>org.slf4j</groupId>
-	    <artifactId>slf4j-api</artifactId>
-	    <version>1.7.25</version>
-	    <scope>provided</scope>
+	  <groupId>org.slf4j</groupId>
+	  <artifactId>slf4j-api</artifactId>
+	  <version>1.7.25</version>
+	  <scope>provided</scope>
 	</dependency>
+	<dependency>
+      <groupId>org.xerial</groupId>
+      <artifactId>sqlite-jdbc</artifactId>
+      <version>3.19.3</version>
+    </dependency>
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <version>6.0.6</version>
+    </dependency>
   </dependencies>
   <description>partial port of https://github.com/egg82/Egg82LibEnhanced</description>
   <url>https://www.egg82.ninja</url>

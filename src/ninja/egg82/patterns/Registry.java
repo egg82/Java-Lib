@@ -2,6 +2,7 @@ package ninja.egg82.patterns;
 
 import java.util.HashMap;
 
+import ninja.egg82.patterns.tuples.Pair;
 import ninja.egg82.utils.ReflectUtil;
 
 public class Registry implements IRegistry {

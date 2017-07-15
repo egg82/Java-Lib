@@ -15,7 +15,7 @@ import java.util.Map.Entry;
 import org.apache.commons.codec.language.DoubleMetaphone;
 import org.apache.commons.lang3.StringUtils;
 
-import ninja.egg82.patterns.Pair;
+import ninja.egg82.patterns.tuples.Pair;
 
 public class LanguageDatabase {
 	//vars

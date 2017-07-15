@@ -2,13 +2,17 @@ package ninja.egg82.patterns;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.ArrayList;
 
 import javax.swing.Timer;
 
-public abstract class Command implements IEventDispatcher {
+import ninja.egg82.events.ExceptionEventArgs;
+import ninja.egg82.patterns.events.EventArgs;
+import ninja.egg82.patterns.events.EventHandler;
+
+public abstract class Command {
 	//vars
-	public static final ArrayList<Observer> OBSERVERS = new ArrayList<Observer>();
+	private final EventHandler<EventArgs> complete = new EventHandler<EventArgs>();
+	private final EventHandler<ExceptionEventArgs> error = new EventHandler<ExceptionEventArgs>();
 	
 	private Timer timer = null;
 	private long startTime = 0L;
@@ -42,8 +46,11 @@ public abstract class Command implements IEventDispatcher {
 		}
 	}
 	
-	public final void dispatch(String event, Object data) {
-		Observer.dispatch(OBSERVERS, this, event, data);
+	public final EventHandler<EventArgs> onComplete() {
+		return complete;
+	}
+	public final EventHandler<ExceptionEventArgs> onError() {
+		return error;
 	}
 	
 	//private

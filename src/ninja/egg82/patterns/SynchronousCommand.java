@@ -1,10 +1,13 @@
 package ninja.egg82.patterns;
 
-import java.util.ArrayList;
+import ninja.egg82.events.ExceptionEventArgs;
+import ninja.egg82.patterns.events.EventArgs;
+import ninja.egg82.patterns.events.EventHandler;
 
-public abstract class SynchronousCommand implements IEventDispatcher {
+public abstract class SynchronousCommand {
 	//vars
-	public static final ArrayList<Observer> OBSERVERS = new ArrayList<Observer>();
+	private final EventHandler<EventArgs> complete = new EventHandler<EventArgs>();
+	private final EventHandler<ExceptionEventArgs> error = new EventHandler<ExceptionEventArgs>();
 	
 	private long startTime = 0L;
 	private int timer = 0;
@@ -38,8 +41,11 @@ public abstract class SynchronousCommand implements IEventDispatcher {
 		}
 	}
 	
-	public final void dispatch(String event, Object data) {
-		Observer.dispatch(OBSERVERS, this, event, data);
+	public final EventHandler<EventArgs> onComplete() {
+		return complete;
+	}
+	public final EventHandler<ExceptionEventArgs> onError() {
+		return error;
 	}
 	
 	//private

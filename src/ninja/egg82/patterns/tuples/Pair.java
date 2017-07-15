@@ -1,4 +1,4 @@
-package ninja.egg82.patterns;
+package ninja.egg82.patterns.tuples;
 
 import ninja.egg82.utils.ReflectUtil;
 
@@ -34,7 +34,7 @@ public final class Pair<L, R> {
 		if (this == obj) {
 			return true;
 		}
-		if (!ReflectUtil.doesExtend(this.getClass(), obj.getClass())) {
+		if (!ReflectUtil.doesExtend(getClass(), obj.getClass())) {
 			return false;
 		}
 		
