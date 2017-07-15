@@ -28,7 +28,9 @@ public class LanguageDatabase {
 	private HashMap<String, List<Integer>> containsCiRows = new HashMap<String, List<Integer>>(); // Case-insensitive version
 	private HashMap<String, List<Integer>> containsDmRows = new HashMap<String, List<Integer>>(); // There may be multiple rows with the same values, hence the list
 	
+	private LinkedHashMap<String, List<Pair<String, Pair<Integer, Integer>>>> exactCache = new LinkedHashMap<String, List<Pair<String, Pair<Integer, Integer>>>>(); // Last 1000 single-word searches
 	private LinkedHashMap<String, List<Pair<String, Pair<Integer, Integer>>>> containsCache = new LinkedHashMap<String, List<Pair<String, Pair<Integer, Integer>>>>(); // Last 1000 single-word searches
+	private LinkedHashMap<String, List<Pair<String, Pair<Integer, Integer>>>> levenshteinCache = new LinkedHashMap<String, List<Pair<String, Pair<Integer, Integer>>>>(); // Last 1000 single-word searches
 	private LinkedHashMap<String, List<Pair<String, Pair<Integer, Integer>>>> dmCache = new LinkedHashMap<String, List<Pair<String, Pair<Integer, Integer>>>>(); // Last 1000 single-word searches
 	
 	//constructor
@@ -101,7 +103,9 @@ public class LanguageDatabase {
 			}
 		}
 		
+		exactCache.clear();
 		containsCache.clear();
+		levenshteinCache.clear();
 		dmCache.clear();
 		
 		return index;
@@ -124,7 +128,9 @@ public class LanguageDatabase {
 		removeFromMap(containsCiRows, rowIndex);
 		removeFromMap(containsDmRows, rowIndex);
 		
+		exactCache.clear();
 		containsCache.clear();
+		levenshteinCache.clear();
 		dmCache.clear();
 	}
 	/**
@@ -149,35 +155,40 @@ public class LanguageDatabase {
 	}
 	
 	/**
-	 * Returns the row IDs of any exact string matches.
+	 * Returns the row IDs of any exact string matches and sorts the results by a relevance score descending and ID ascending.
 	 * 
 	 * @param search The search query
 	 * @param caseSensitive Whether or not the search is case-sensitive
-	 * @return A list of row IDs that contain the specified query, ordered by ID ascending
+	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
 	public int[] exact(String search, boolean caseSensitive) {
 		return exact(new String[] {search}, caseSensitive);
 	}
 	/**
-	 * Returns the row IDs of any exact string matches.
+	 * Returns the row IDs of any exact string matches and sorts the results by a relevance score descending and ID ascending.
 	 * 
 	 * @param search The search query
 	 * @param caseSensitive Whether or not the search is case-sensitive
 	 * @param delimiter An optional delimiter to split the string into several searches
-	 * @return A list of row IDs that contain the specified query, ordered by ID ascending
+	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
 	public int[] exact(String search, boolean caseSensitive, char delimiter) {
 		return exact(search.split("\\" + delimiter), caseSensitive);
 	}
 	/**
-	 * Returns the row IDs of any exact string matches.
+	 * Returns the row IDs of any exact string matches and sorts the results by a relevance score descending and ID ascending.
 	 * 
 	 * @param search The search query
 	 * @param caseSensitive Whether or not the search is case-sensitive
-	 * @return A list of row IDs that contain the specified query, ordered by ID ascending
+	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
 	public int[] exact(String[] search, boolean caseSensitive) {
 		ArrayList<Integer> ids = new ArrayList<Integer>();
+		ArrayList<Pair<String, Integer>> keyColumn = new ArrayList<Pair<String, Integer>>();
+		ArrayList<Pair<String, Double>> keyScore = new ArrayList<Pair<String, Double>>();
+		double maxColumn = 0.0d;
+		double maxSize = 0.0d;
+		double maxFrequency = 0.0d;
 		
 		if (!caseSensitive) {
 			for (int i = 0; i < search.length; i++) {
@@ -191,34 +202,156 @@ public class LanguageDatabase {
 		
 		if (caseSensitive) {
 			for (String s : searchSet) {
-				List<Integer> temp = containsRows.get(s);
-				if (temp != null && temp.size() > 0) {
-					for (int j = 0; j < temp.size(); j++) {
-						if (!ids.contains(temp.get(j))) {
-							ids.add(temp.get(j));
+				if (exactCache.containsKey(s)) {
+					List<Pair<String, Pair<Integer, Integer>>> result = exactCache.get(s);
+					bumpCache(exactCache, s);
+					for (int i = 0; i < result.size(); i++) {
+						keyColumn.add(new Pair<String, Integer>(result.get(i).getLeft(), result.get(i).getRight().getLeft()));
+						int currentColumn = result.get(i).getRight().getLeft();
+						if (maxColumn < currentColumn) {
+							maxColumn = currentColumn;
+						}
+						int size = result.get(i).getRight().getRight();
+						if (maxSize < size) {
+							maxSize = size;
+						}
+					}
+				} else {
+					for (Entry<String, List<Integer>> kvp : containsRows.entrySet()) {
+						String key = kvp.getKey();
+						if (s.equals(key)) {
+							int currentColumn = Integer.MAX_VALUE;
+							for (int id : kvp.getValue()) {
+								List<String> row = rows.get(id);
+								for (int i = 0; i < row.size(); i++) {
+									if (s.equals(row.get(i))) {
+										if (i < currentColumn) {
+											currentColumn = i;
+										}
+									}
+								}
+							}
+							
+							keyColumn.add(new Pair<String, Integer>(key, currentColumn));
+							if (maxColumn < currentColumn) {
+								maxColumn = currentColumn;
+							}
+							int size = kvp.getValue().size();
+							if (maxSize < size) {
+								maxSize = size;
+							}
+							
+							addToCache(exactCache, s, key, currentColumn, size);
 						}
 					}
 				}
 			}
+			
+			for (int i = 0; i < keyColumn.size(); i++) {
+				int frequency = Collections.frequency(keyColumn, keyColumn.get(i));
+				if (maxFrequency < frequency) {
+					maxFrequency = frequency;
+				}
+			}
+			for (int i = 0; i < keyColumn.size(); i++) {
+				double score = ((double) keyColumn.get(i).getRight()) / maxColumn;
+				score -= (((double) containsRows.get(keyColumn.get(i).getLeft()).size()) / maxSize) / 5.0d;
+				score -= (((double) Collections.frequency(keyColumn, keyColumn.get(i)) - 1.0d) / maxFrequency) / 5.0d;
+				keyScore.add(new Pair<String, Double>(keyColumn.get(i).getLeft(), score));
+			}
 		} else {
 			for (String s : searchSet) {
-				List<Integer> temp = containsCiRows.get(s);
-				if (temp != null && temp.size() > 0) {
-					for (int j = 0; j < temp.size(); j++) {
-						if (!ids.contains(temp.get(j))) {
-							ids.add(temp.get(j));
+				if (exactCache.containsKey(s)) {
+					List<Pair<String, Pair<Integer, Integer>>> result = exactCache.get(s);
+					bumpCache(exactCache, s);
+					for (int i = 0; i < result.size(); i++) {
+						keyColumn.add(new Pair<String, Integer>(result.get(i).getLeft(), result.get(i).getRight().getLeft()));
+						int currentColumn = result.get(i).getRight().getLeft();
+						if (maxColumn < currentColumn) {
+							maxColumn = currentColumn;
 						}
+						int size = result.get(i).getRight().getRight();
+						if (maxSize < size) {
+							maxSize = size;
+						}
+					}
+				} else {
+					for (Entry<String, List<Integer>> kvp : containsCiRows.entrySet()) {
+						String key = kvp.getKey();
+						if (key.contains(s) || s.contains(key)) {
+							int currentColumn = Integer.MAX_VALUE;
+							for (int id : kvp.getValue()) {
+								List<String> row = ciRows.get(id);
+								for (int i = 0; i < row.size(); i++) {
+									if (s.equals(row.get(i))) {
+										if (i < currentColumn) {
+											currentColumn = i;
+										}
+									}
+								}
+							}
+							
+							keyColumn.add(new Pair<String, Integer>(key, currentColumn));
+							if (maxColumn < currentColumn) {
+								maxColumn = currentColumn;
+							}
+							int size = kvp.getValue().size();
+							if (maxSize < size) {
+								maxSize = size;
+							}
+							
+							addToCache(exactCache, s, key, currentColumn, size);
+						}
+					}
+				}
+			}
+			
+			for (int i = 0; i < keyColumn.size(); i++) {
+				int frequency = Collections.frequency(keyColumn, keyColumn.get(i));
+				if (maxFrequency < frequency) {
+					maxFrequency = frequency;
+				}
+			}
+			for (int i = 0; i < keyColumn.size(); i++) {
+				double score = ((double) keyColumn.get(i).getRight()) / maxColumn;
+				score -= (((double) containsCiRows.get(keyColumn.get(i).getLeft()).size()) / maxSize) / 5.0d;
+				score -= (((double) Collections.frequency(keyColumn, keyColumn.get(i)) - 1.0d) / maxFrequency) / 5.0d;
+				keyScore.add(new Pair<String, Double>(keyColumn.get(i).getLeft(), score));
+			}
+		}
+		
+		keyScore.sort(new Comparator<Pair<String, Double>>() {
+			@Override
+			public int compare(Pair<String, Double> one, Pair<String, Double> two) {
+				return one.getRight().compareTo(two.getRight());
+			}
+		});
+		
+		if (caseSensitive) {
+			for (int i = 0; i < keyScore.size(); i++) {
+				List<Integer> temp = containsRows.get(keyScore.get(i).getLeft());
+				for (int j = 0; j < temp.size(); j++) {
+					if (!ids.contains(temp.get(j))) {
+						ids.add(temp.get(j));
+					}
+				}
+			}
+		} else {
+			for (int i = 0; i < keyScore.size(); i++) {
+				List<Integer> temp = containsCiRows.get(keyScore.get(i).getLeft());
+				for (int j = 0; j < temp.size(); j++) {
+					if (!ids.contains(temp.get(j))) {
+						ids.add(temp.get(j));
 					}
 				}
 			}
 		}
 		
-		Collections.sort(ids);
-		
 		return ids.stream().mapToInt(i -> i).toArray();
 	}
+	
 	/**
-	 * Returns the row IDs of any substring matches and sorts the results by a relevance score descending and ID ascending
+	 * Returns the row IDs of any substring matches and sorts the results by a relevance score descending and ID ascending.
 	 * 
 	 * @param search The search query
 	 * @param caseSensitive Whether or not the search is case-sensitive
@@ -228,7 +361,7 @@ public class LanguageDatabase {
 		return substring(new String[] {search}, caseSensitive);
 	}
 	/**
-	 * Returns the row IDs of any substring matches and sorts the results by a relevance score descending and ID ascending
+	 * Returns the row IDs of any substring matches and sorts the results by a relevance score descending and ID ascending.
 	 * 
 	 * @param search The search query
 	 * @param caseSensitive Whether or not the search is case-sensitive
@@ -239,7 +372,7 @@ public class LanguageDatabase {
 		return substring(search.split("\\" + delimiter), caseSensitive);
 	}
 	/**
-	 * Returns the row IDs of any substring matches and sorts the results by a relevance score descending and ID ascending
+	 * Returns the row IDs of any substring matches and sorts the results by a relevance score descending and ID ascending.
 	 * 
 	 * @param search The search query
 	 * @param caseSensitive Whether or not the search is case-sensitive
@@ -251,7 +384,7 @@ public class LanguageDatabase {
 		ArrayList<Pair<String, Double>> keyScore = new ArrayList<Pair<String, Double>>();
 		double maxLevenshtein = 0.0d;
 		double maxSize = 0.0d;
-		double maxFrequency = 0;
+		double maxFrequency = 0.0d;
 		
 		if (!caseSensitive) {
 			for (int i = 0; i < search.length; i++) {
@@ -390,6 +523,181 @@ public class LanguageDatabase {
 		
 		return ids.stream().mapToInt(i -> i).toArray();
 	}
+	
+	/**
+	 * Returns the row IDs of any levenshtein distances <= 3 and sorts the results by a relevance score descending and ID ascending.
+	 * 
+	 * @param search The search query
+	 * @param caseSensitive Whether or not the search is case-sensitive
+	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
+	 */
+	public int[] levenshtein(String search, boolean caseSensitive) {
+		return levenshtein(new String[] {search}, caseSensitive);
+	}
+	/**
+	 * Returns the row IDs of any levenshtein distances <= 3 and sorts the results by a relevance score descending and ID ascending.
+	 * 
+	 * @param search The search query
+	 * @param caseSensitive Whether or not the search is case-sensitive
+	 * @param delimiter An optional delimiter to split the string into several searches
+	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
+	 */
+	public int[] levenshtein(String search, boolean caseSensitive, char delimiter) {
+		return levenshtein(search.split("\\" + delimiter), caseSensitive);
+	}
+	/**
+	 * Returns the row IDs of any levenshtein distances <= 3 and sorts the results by a relevance score descending and ID ascending.
+	 * 
+	 * @param search The search query
+	 * @param caseSensitive Whether or not the search is case-sensitive
+	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
+	 */
+	public int[] levenshtein(String[] search, boolean caseSensitive) {
+		ArrayList<Integer> ids = new ArrayList<Integer>();
+		ArrayList<Pair<String, Integer>> keyLevenshtein = new ArrayList<Pair<String, Integer>>();
+		ArrayList<Pair<String, Double>> keyScore = new ArrayList<Pair<String, Double>>();
+		double maxLevenshtein = 0.0d;
+		double maxSize = 0.0d;
+		double maxFrequency = 0.0d;
+		
+		if (!caseSensitive) {
+			for (int i = 0; i < search.length; i++) {
+				search[i] = search[i].toLowerCase();
+			}
+		}
+		
+		HashSet<String> searchSet = new HashSet<String>(Arrays.asList(search));
+		searchSet.remove(null);
+		searchSet.remove("");
+		
+		if (caseSensitive) {
+			for (String s : searchSet) {
+				if (levenshteinCache.containsKey(s)) {
+					List<Pair<String, Pair<Integer, Integer>>> result = levenshteinCache.get(s);
+					bumpCache(levenshteinCache, s);
+					for (int i = 0; i < result.size(); i++) {
+						keyLevenshtein.add(new Pair<String, Integer>(result.get(i).getLeft(), result.get(i).getRight().getLeft()));
+						int currentDistance = result.get(i).getRight().getLeft();
+						if (maxLevenshtein < currentDistance) {
+							maxLevenshtein = currentDistance;
+						}
+						int size = result.get(i).getRight().getRight();
+						if (maxSize < size) {
+							maxSize = size;
+						}
+					}
+				} else {
+					for (Entry<String, List<Integer>> kvp : containsRows.entrySet()) {
+						String key = kvp.getKey();
+						int currentDistance = StringUtils.getLevenshteinDistance(key, s);
+						if (currentDistance <= 3) {
+							keyLevenshtein.add(new Pair<String, Integer>(key, currentDistance));
+							if (maxLevenshtein < currentDistance) {
+								maxLevenshtein = currentDistance;
+							}
+							int size = kvp.getValue().size();
+							if (maxSize < size) {
+								maxSize = size;
+							}
+							
+							addToCache(levenshteinCache, s, key, currentDistance, size);
+						}
+					}
+				}
+			}
+			
+			for (int i = 0; i < keyLevenshtein.size(); i++) {
+				int frequency = Collections.frequency(keyLevenshtein, keyLevenshtein.get(i));
+				if (maxFrequency < frequency) {
+					maxFrequency = frequency;
+				}
+			}
+			for (int i = 0; i < keyLevenshtein.size(); i++) {
+				double score = ((double) keyLevenshtein.get(i).getRight()) / maxLevenshtein;
+				score -= (((double) containsRows.get(keyLevenshtein.get(i).getLeft()).size()) / maxSize) / 5.0d;
+				score -= (((double) Collections.frequency(keyLevenshtein, keyLevenshtein.get(i)) - 1.0d) / maxFrequency) / 5.0d;
+				keyScore.add(new Pair<String, Double>(keyLevenshtein.get(i).getLeft(), score));
+			}
+		} else {
+			for (String s : searchSet) {
+				if (levenshteinCache.containsKey(s)) {
+					List<Pair<String, Pair<Integer, Integer>>> result = levenshteinCache.get(s);
+					bumpCache(levenshteinCache, s);
+					for (int i = 0; i < result.size(); i++) {
+						keyLevenshtein.add(new Pair<String, Integer>(result.get(i).getLeft(), result.get(i).getRight().getLeft()));
+						int currentDistance = result.get(i).getRight().getLeft();
+						if (maxLevenshtein < currentDistance) {
+							maxLevenshtein = currentDistance;
+						}
+						int size = result.get(i).getRight().getRight();
+						if (maxSize < size) {
+							maxSize = size;
+						}
+					}
+				} else {
+					for (Entry<String, List<Integer>> kvp : containsCiRows.entrySet()) {
+						String key = kvp.getKey();
+						int currentDistance = StringUtils.getLevenshteinDistance(key, s);
+						if (currentDistance <= 3) {
+							keyLevenshtein.add(new Pair<String, Integer>(key, currentDistance));
+							if (maxLevenshtein < currentDistance) {
+								maxLevenshtein = currentDistance;
+							}
+							int size = kvp.getValue().size();
+							if (maxSize < size) {
+								maxSize = size;
+							}
+							
+							addToCache(levenshteinCache, s, key, currentDistance, size);
+						}
+					}
+				}
+			}
+			
+			for (int i = 0; i < keyLevenshtein.size(); i++) {
+				int frequency = Collections.frequency(keyLevenshtein, keyLevenshtein.get(i));
+				if (maxFrequency < frequency) {
+					maxFrequency = frequency;
+				}
+			}
+			for (int i = 0; i < keyLevenshtein.size(); i++) {
+				double score = ((double) keyLevenshtein.get(i).getRight()) / maxLevenshtein;
+				score -= (((double) containsCiRows.get(keyLevenshtein.get(i).getLeft()).size()) / maxSize) / 5.0d;
+				score -= (((double) Collections.frequency(keyLevenshtein, keyLevenshtein.get(i)) - 1.0d) / maxFrequency) / 5.0d;
+				keyScore.add(new Pair<String, Double>(keyLevenshtein.get(i).getLeft(), score));
+			}
+		}
+		
+		keyScore.sort(new Comparator<Pair<String, Double>>() {
+			@Override
+			public int compare(Pair<String, Double> one, Pair<String, Double> two) {
+				return one.getRight().compareTo(two.getRight());
+			}
+		});
+		
+		if (caseSensitive) {
+			for (int i = 0; i < keyScore.size(); i++) {
+				List<Integer> temp = containsRows.get(keyScore.get(i).getLeft());
+				for (int j = 0; j < temp.size(); j++) {
+					if (!ids.contains(temp.get(j))) {
+						ids.add(temp.get(j));
+					}
+				}
+			}
+		} else {
+			for (int i = 0; i < keyScore.size(); i++) {
+				List<Integer> temp = containsCiRows.get(keyScore.get(i).getLeft());
+				for (int j = 0; j < temp.size(); j++) {
+					if (!ids.contains(temp.get(j))) {
+						ids.add(temp.get(j));
+					}
+				}
+			}
+		}
+		
+		return ids.stream().mapToInt(i -> i).toArray();
+	}
+	
 	/**
 	 * Returns the row IDs of any double-metaphone matches and sorts the results by a relevance score descending and ID ascending. This search is always case-insensitive.
 	 * 
@@ -421,7 +729,7 @@ public class LanguageDatabase {
 		ArrayList<Pair<String, Double>> keyScore = new ArrayList<Pair<String, Double>>();
 		double maxLevenshtein = 0.0d;
 		double maxSize = 0.0d;
-		double maxFrequency = 0;
+		double maxFrequency = 0.0d;
 		
 		String[] searchDm = new String[search.length * 2];
 		for (int i = 0; i < search.length; i++) {
@@ -539,6 +847,13 @@ public class LanguageDatabase {
 		for (int i = 0; i < substringMatches.length; i++) {
 			if (!ids.contains(substringMatches[i])) {
 				ids.add(substringMatches[i]);
+			}
+		}
+		
+		int[] levenshteinMatches = levenshtein(search, caseSensitive);
+		for (int i = 0; i < levenshteinMatches.length; i++) {
+			if (!ids.contains(levenshteinMatches[i])) {
+				ids.add(levenshteinMatches[i]);
 			}
 		}
 		

@@ -7,8 +7,5 @@ Java port of useful AS3-Framework utilities
       <url>https://www.myget.org/F/egg82-java/maven/</url>
     </repository>
 
-    <dependency>
-      <groupId>ninja.egg82.lib</groupId>
-      <artifactId>egg82-lib</artifactId>
-      <version>1.4.10</version>
-    </dependency>
+### Latest Repo
+https://www.myget.org/feed/egg82-java/package/maven/ninja.egg82.lib/egg82-lib
