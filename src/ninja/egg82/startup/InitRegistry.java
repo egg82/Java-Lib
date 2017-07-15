@@ -7,7 +7,7 @@ public final class InitRegistry extends Registry {
 	
 	//constructor
 	public InitRegistry() {
-		setRegister("java.version", String.class, System.getProperty("java.version"));
+		setRegister("java.version", System.getProperty("java.version"));
 	}
 	
 	//public

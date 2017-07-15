@@ -19,24 +19,13 @@ public class Registry implements IRegistry {
 	}
 	
 	//public
-	public final synchronized void setRegister(String name, Class<?> type, Object data) {
+	public final synchronized void setRegister(String name, Object data) {
 		if (name == null) {
 			throw new ArgumentNullException("name");
 		}
-		if (type == null) {
-			throw new ArgumentNullException("type");
-		}
-		
-		if (!ReflectUtil.doesExtend(type, data.getClass())) {
-			try {
-				data = type.cast(data);
-			} catch (Exception ex) {
-				throw new RuntimeException("data type cannot be converted to the type specified.", ex);
-			}
-		}
 		
 		Pair<Class<?>, Object> pair = registry.get(name);
-		registry.put(name, new Pair<Class<?>, Object>(type, data));
+		registry.put(name, new Pair<Class<?>, Object>(data.getClass(), data));
 		reverseRegistry.put(data, name);
 		
 		if (pair == null) {

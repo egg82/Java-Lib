@@ -111,15 +111,31 @@ public final class SettingsUtil {
     		
     		if (obj.getClass().isArray()) {
     			if (registry.hasRegister(i)) {
-            		registry.setRegister(i, registry.getRegisterClass(i), obj);
+    				try {
+    					registry.setRegister(i, registry.getRegisterClass(i).cast(obj));
+    				} catch (Exception ex) {
+    					
+    				}
             	} else {
-            		registry.setRegister(i, Object[].class, obj);
+            		try {
+            			registry.setRegister(i, Object[].class.cast(obj));
+    				} catch (Exception ex) {
+    					
+    				}
             	}
     		} else {
     			if (registry.hasRegister(i)) {
-            		registry.setRegister(i, registry.getRegisterClass(i), obj);
+    				try {
+    					registry.setRegister(i, registry.getRegisterClass(i).cast(obj));
+    				} catch (Exception ex) {
+    					
+    				}
             	} else {
-            		registry.setRegister(i, Object.class, obj);
+            		try {
+            			registry.setRegister(i, Object.class.cast(obj));
+    				} catch (Exception ex) {
+    					
+    				}
             	}
     		}
         }

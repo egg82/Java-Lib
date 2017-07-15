@@ -2,7 +2,7 @@ package ninja.egg82.patterns;
 
 public interface IRegistry {
 	//functions
-	void setRegister(String name, Class<?> type, Object data);
+	void setRegister(String name, Object data);
 	void removeRegister(String name);
 	
 	Object getRegister(String name);
