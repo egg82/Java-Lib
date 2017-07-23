@@ -1,13 +1,17 @@
 package ninja.egg82.patterns.events;
 
 import java.util.ArrayList;
-import java.util.function.BiFunction;
+import java.util.function.BiConsumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import ninja.egg82.exceptions.ArgumentNullException;
 
 public class EventHandler<T extends EventArgs> {
 	//vars
-	private ArrayList<BiFunction<Object, T, Void>> listeners = new ArrayList<BiFunction<Object, T, Void>>();
+	private static final Logger logger = Logger.getLogger("ninja.egg82.patterns.events.EventHandler");
+	
+	private ArrayList<BiConsumer<Object, T>> listeners = new ArrayList<BiConsumer<Object, T>>();
 	
 	//constructor
 	public EventHandler() {
@@ -15,7 +19,7 @@ public class EventHandler<T extends EventArgs> {
 	}
 	
 	//public
-	public synchronized void attach(BiFunction<Object, T, Void> listener) {
+	public synchronized void attach(BiConsumer<Object, T> listener) {
 		if (listener == null) {
 			throw new ArgumentNullException("listener");
 		}
@@ -24,7 +28,7 @@ public class EventHandler<T extends EventArgs> {
 		}
 		listeners.add(listener);
 	}
-	public synchronized void detatch(BiFunction<Object, T, Void> listener) {
+	public synchronized void detatch(BiConsumer<Object, T> listener) {
 		if (listener == null) {
 			throw new ArgumentNullException("listener");
 		}
@@ -35,11 +39,15 @@ public class EventHandler<T extends EventArgs> {
 	}
 	
 	public synchronized void invoke(Object sender, T args) {
-		for (BiFunction<Object, T, Void> func : listeners) {
+		for (BiConsumer<Object, T> func : listeners) {
 			try {
-				func.apply(sender, args);
+				func.accept(sender, args);
 			} catch (Exception ex) {
-				throw new RuntimeException("Could not invoke listener.", ex);
+				logger.log(Level.WARNING, "Could not invoke listener.", ex);
+				if (logger.isLoggable(Level.WARNING)) {
+					System.out.println("Could not invoke listener.");
+					ex.printStackTrace();
+				}
 			}
 		}
 	}

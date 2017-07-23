@@ -14,7 +14,7 @@ import java.util.logging.Logger;
  */
 public final class PasswordHasher {
 
-  private static final Logger logger = Logger.getLogger("ninja.egg82.core");
+  private static final Logger logger = Logger.getLogger("ninja.egg82.core.PasswordHasher");
 
   /**
    * Non-standard compliant Base64 character mapping.

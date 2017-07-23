@@ -78,7 +78,8 @@ public final class ServiceLocator {
 			initializedServices.put(clazz, initializeService(clazz));
 		}
 	}
-	public synchronized static void removeService(Class<?> clazz) {
+	@SuppressWarnings("unchecked")
+	public synchronized static <T> T removeService(Class<T> clazz) {
 		if (clazz == null) {
 			throw new ArgumentNullException("clazz");
 		}
@@ -99,10 +100,12 @@ public final class ServiceLocator {
 					}
 					lookupCache.entrySet().removeIf(v -> ReflectUtil.doesExtend(clazz, v.getValue().getClass()));
 					services.remove(i);
-					return;
+					return (T) result;
 				}
 			}
 		}
+		
+		return (T) result;
 	}
 	
 	public synchronized static boolean hasService(Class<?> clazz) {

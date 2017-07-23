@@ -1,13 +1,13 @@
 package ninja.egg82.patterns;
 
+import ninja.egg82.events.CompleteEventArgs;
 import ninja.egg82.events.ExceptionEventArgs;
-import ninja.egg82.patterns.events.EventArgs;
 import ninja.egg82.patterns.events.EventHandler;
 
 public abstract class SynchronousCommand {
 	//vars
-	private final EventHandler<EventArgs> complete = new EventHandler<EventArgs>();
-	private final EventHandler<ExceptionEventArgs> error = new EventHandler<ExceptionEventArgs>();
+	private final EventHandler<CompleteEventArgs<?>> complete = new EventHandler<CompleteEventArgs<?>>();
+	private final EventHandler<ExceptionEventArgs<?>> error = new EventHandler<ExceptionEventArgs<?>>();
 	
 	private long startTime = 0L;
 	private int timer = 0;
@@ -41,10 +41,10 @@ public abstract class SynchronousCommand {
 		}
 	}
 	
-	public final EventHandler<EventArgs> onComplete() {
+	public final EventHandler<CompleteEventArgs<?>> onComplete() {
 		return complete;
 	}
-	public final EventHandler<ExceptionEventArgs> onError() {
+	public final EventHandler<ExceptionEventArgs<?>> onError() {
 		return error;
 	}
 	

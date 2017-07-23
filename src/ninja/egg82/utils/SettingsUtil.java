@@ -15,10 +15,10 @@ public final class SettingsUtil {
     }
     
     //public
-    public static void load(String path, IRegistry registry) throws Exception {
+    public static void load(String path, IRegistry<String> registry) throws Exception {
     	load(path, registry, FileUtil.UTF_8);
     }
-    public static void load(String path, IRegistry registry, Charset enc) throws Exception {
+    public static void load(String path, IRegistry<String> registry, Charset enc) throws Exception {
     	if (!FileUtil.pathExists(path)) {
     		throw new RuntimeException("path does not exist.");
     	}
@@ -57,10 +57,10 @@ public final class SettingsUtil {
         }
     }
     
-    public static void save(String path, IRegistry registry) throws Exception {
+    public static void save(String path, IRegistry<String> registry) throws Exception {
     	save(path, registry, FileUtil.UTF_8);
     }
-    public static void save(String path, IRegistry registry, Charset enc) throws Exception {
+    public static void save(String path, IRegistry<String> registry, Charset enc) throws Exception {
     	if (FileUtil.pathExists(path)) {
     		if (!FileUtil.pathIsFile(path)) {
     			throw new RuntimeException("path is not a file.");
@@ -69,7 +69,7 @@ public final class SettingsUtil {
     		FileUtil.createFile(path);
     	}
     	
-        String[] names = registry.getRegistryNames();
+        String[] names = registry.getRegistryKeys();
         
         boolean fileWasOpen = true;
         
@@ -92,10 +92,10 @@ public final class SettingsUtil {
         }
     }
     
-    public static void loadSave(String path, IRegistry registry) throws Exception {
+    public static void loadSave(String path, IRegistry<String> registry) throws Exception {
         loadSave(path, registry, FileUtil.UTF_8);
     }
-    public static void loadSave(String path, IRegistry registry, Charset enc) throws Exception {
+    public static void loadSave(String path, IRegistry<String> registry, Charset enc) throws Exception {
     	if (!FileUtil.pathExists(path)) {
     		FileUtil.createFile(path);
     	}
@@ -105,7 +105,7 @@ public final class SettingsUtil {
     }
     
     //private
-    private static void setRegistry(JSONObject json, IRegistry registry) {
+    private static void setRegistry(JSONObject json, IRegistry<String> registry) {
     	for (String i : json.keySet()) {
     		Object obj = json.get(i);
     		
