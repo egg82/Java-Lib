@@ -190,7 +190,7 @@ public final class ReflectUtil {
 			return false;
 		}
 		
-		return classToTest == baseClass || baseClass.isAssignableFrom(classToTest);
+		return classToTest.equals(baseClass) || baseClass.isAssignableFrom(classToTest);
 	}
 	
 	//private

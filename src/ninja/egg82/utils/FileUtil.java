@@ -19,6 +19,7 @@ public final class FileUtil {
 	
 	public static final String CURRENT_DIRECTORY = System.getProperty("user.dir");
 	public static final char DIRECTORY_SEPARATOR_CHAR = File.separatorChar;
+	public static final String LINE_SEPARATOR = System.lineSeparator();
 	
 	private static HashMap<String, FileInputStream> inStreams = new HashMap<String, FileInputStream>();
 	private static HashMap<String, FileOutputStream> outStreams = new HashMap<String, FileOutputStream>();
@@ -123,6 +124,18 @@ public final class FileUtil {
     		return 0L;
     	}
     	
+    	if (inStreams.containsKey(path)) {
+    		try {
+	    		long oldPosition = inStreams.get(path).getChannel().position();
+	    		inStreams.get(path).getChannel().position(0L);
+	    		long available = inStreams.get(path).available();
+	    		inStreams.get(path).getChannel().position(oldPosition);
+	    		return available;
+    		} catch (Exception ex) {
+	    		return 0L;
+	    	}
+    	}
+    	
     	try {
     		return new File(path).length();
     	} catch (Exception ex) {
@@ -142,17 +155,19 @@ public final class FileUtil {
     	}
     	
     	if (inStreams.containsKey(path) || outStreams.containsKey(path)) {
-    		close(path);
+    		return;
     	}
     	
     	inStreams.put(path, new FileInputStream(path));
+    	byte[] old = read(path, 0);
     	outStreams.put(path, new FileOutputStream(path, false));
+    	write(path, old, 0);
     }
     public synchronized static void close(String path) throws Exception {
     	if (path == null) {
     		throw new ArgumentNullException("path");
     	}
-    	if (!inStreams.containsKey(path)) {
+    	if (!inStreams.containsKey(path) && !outStreams.containsKey(path)) {
     		return;
     	}
     	

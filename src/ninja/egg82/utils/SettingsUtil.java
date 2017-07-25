@@ -69,7 +69,7 @@ public final class SettingsUtil {
     		FileUtil.createFile(path);
     	}
     	
-        String[] names = registry.getRegistryKeys();
+        String[] names = registry.getKeys();
         
         boolean fileWasOpen = true;
         

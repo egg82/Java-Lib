@@ -162,7 +162,7 @@ public class Registry<K> implements IRegistry<K> {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public final K[] getRegistryKeys() {
+	public final K[] getKeys() {
 		if (keysDirty) {
 			keyCache = registry.keySet().toArray((K[]) Array.newInstance(keyClass, 0));
 			keysDirty = false;

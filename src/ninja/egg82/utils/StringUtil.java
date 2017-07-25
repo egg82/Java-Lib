@@ -141,6 +141,10 @@ public final class StringUtil {
 	}
 	
 	public static String repeatChar(char character, int length) {
+		if (length <= 0) {
+			return "";
+		}
+		
 		StringBuffer retVal = new StringBuffer(length);
 		
 		for (int i = 0; i < length; i++) {

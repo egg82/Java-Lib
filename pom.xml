@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>ninja.egg82.lib</groupId>
   <artifactId>egg82-lib</artifactId>
-  <version>1.5.14</version>
+  <version>1.5.15</version>
   <name>egg82-lib</name>
   <build>
     <sourceDirectory>src</sourceDirectory>

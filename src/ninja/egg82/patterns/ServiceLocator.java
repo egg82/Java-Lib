@@ -2,6 +2,7 @@ package ninja.egg82.patterns;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import ninja.egg82.exceptions.ArgumentNullException;
 import ninja.egg82.utils.ReflectUtil;
@@ -45,7 +46,7 @@ public final class ServiceLocator {
 					result = initializedServices.get(c);
 					if (result == null) {
 						result = initializeService(c);
-						initializedServices.put(clazz, result);
+						initializedServices.put(c, result);
 					}
 					lookupCache.put(clazz, result);
 					break;
@@ -53,7 +54,11 @@ public final class ServiceLocator {
 			}
 		}
 		
-		return (T) result;
+		if (result == null) {
+			return null;
+		} else {
+			return (T) result;
+		}
 	}
 	public synchronized static void provideService(Class<?> clazz) {
 		provideService(clazz, true);
@@ -65,7 +70,7 @@ public final class ServiceLocator {
 		
 		// Destroy any existing services and cache
 		initializedServices.remove(clazz);
-		lookupCache.entrySet().removeIf(v -> ReflectUtil.doesExtend(clazz, v.getValue().getClass()));
+		lookupCache.entrySet().removeIf(v -> ReflectUtil.doesExtend(v.getKey(), clazz));
 		
 		int index = services.indexOf(clazz);
 		if (index > -1) {
@@ -79,33 +84,28 @@ public final class ServiceLocator {
 		}
 	}
 	@SuppressWarnings("unchecked")
-	public synchronized static <T> T removeService(Class<T> clazz) {
+	public synchronized static <T> List<T> removeServices(Class<T> clazz) {
 		if (clazz == null) {
 			throw new ArgumentNullException("clazz");
 		}
 		
-		Object result = initializedServices.get(clazz);
-		if (result != null) {
-			initializedServices.remove(clazz);
-		}
-		services.remove(clazz);
+		ArrayList<T> retVal = new ArrayList<T>();
 		
-		if (result == null) {
-			for (int i = 0; i < services.size(); i++) {
-				Class<?> c = services.get(i);
-				if (ReflectUtil.doesExtend(clazz, c)) {
-					result = initializedServices.get(c);
-					if (result != null) {
-						initializedServices.remove(clazz);
-					}
-					lookupCache.entrySet().removeIf(v -> ReflectUtil.doesExtend(clazz, v.getValue().getClass()));
-					services.remove(i);
-					return (T) result;
+		lookupCache.entrySet().removeIf(v -> ReflectUtil.doesExtend(v.getKey(), clazz));
+		
+		for (int i = 0; i < services.size(); i++) {
+			Class<?> c = services.get(i);
+			if (ReflectUtil.doesExtend(clazz, c)) {
+				T result = (T) initializedServices.get(c);
+				if (result != null) {
+					retVal.add(result);
 				}
+				initializedServices.remove(c);
+				services.remove(i);
 			}
 		}
 		
-		return (T) result;
+		return retVal;
 	}
 	
 	public synchronized static boolean hasService(Class<?> clazz) {

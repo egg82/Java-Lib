@@ -17,5 +17,5 @@ public interface IRegistry<K> {
 	boolean hasValue(Object data);
 	
 	void clear();
-	K[] getRegistryKeys();
+	K[] getKeys();
 }
