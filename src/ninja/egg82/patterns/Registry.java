@@ -30,7 +30,6 @@ public class Registry<K> implements IRegistry<K> {
 		
 		Pair<Class<?>, Object> pair = registry.get(key);
 		registry.put(key, new Pair<Class<?>, Object>((data != null) ? data.getClass() : null, data));
-		reverseRegistry.put(data, key);
 		
 		if (pair == null) {
 			// Key didn't exist before. Added.
@@ -39,6 +38,8 @@ public class Registry<K> implements IRegistry<K> {
 			// Key existed before. Need to remove old value->key from reverse registry.
 			reverseRegistry.remove(pair.getRight());
 		}
+		
+		reverseRegistry.put(data, key);
 	}
 	public final synchronized Object removeRegister(K key) {
 		if (key == null) {

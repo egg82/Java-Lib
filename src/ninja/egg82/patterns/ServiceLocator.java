@@ -30,7 +30,7 @@ public final class ServiceLocator {
 		if (result == null) {
 			int index = services.indexOf(clazz);
 			if (index > -1) {
-				result = initializeService(services.get(index));
+				result = initializeService(clazz);
 				initializedServices.put(clazz, result);
 			}
 		}
@@ -93,7 +93,7 @@ public final class ServiceLocator {
 		
 		lookupCache.entrySet().removeIf(v -> ReflectUtil.doesExtend(v.getKey(), clazz));
 		
-		for (int i = 0; i < services.size(); i++) {
+		for (int i = services.size() - 1; i >= 0; i--) {
 			Class<?> c = services.get(i);
 			if (ReflectUtil.doesExtend(clazz, c)) {
 				T result = (T) initializedServices.get(c);
