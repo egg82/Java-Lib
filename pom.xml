@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>ninja.egg82.lib</groupId>
   <artifactId>egg82-lib</artifactId>
-  <version>1.5.16</version>
+  <version>1.5.17</version>
   <name>egg82-lib</name>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -76,6 +76,10 @@
                   <pattern>com.mysql</pattern>
                   <shadedPattern>ninja.egg82.lib.com.mysql</shadedPattern>
                 </relocation>
+                <relocation>
+                  <pattern>net.jodah</pattern>
+                  <shadedPattern>ninja.egg82.lib.net.jodah</shadedPattern>
+                </relocation>
               </relocations>
             </configuration>
           </execution>
@@ -126,6 +130,11 @@
       <groupId>mysql</groupId>
       <artifactId>mysql-connector-java</artifactId>
       <version>6.0.6</version>
+    </dependency>
+    <dependency>
+      <groupId>net.jodah</groupId>
+      <artifactId>expiringmap</artifactId>
+      <version>0.5.8</version>
     </dependency>
   </dependencies>
   <description>partial port of https://github.com/egg82/Egg82LibEnhanced</description>

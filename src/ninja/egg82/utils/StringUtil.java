@@ -1,5 +1,7 @@
 package ninja.egg82.utils;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public final class StringUtil {
@@ -18,6 +20,19 @@ public final class StringUtil {
 			buffer[i] = subset[MathUtil.fairRoundedRandom(0, subset.length - 1)];
 		}
 		return new String(buffer);
+	}
+	public static String shuffle(String input) {
+		ArrayList<Character> letters = new ArrayList<Character>();
+		char[] c = input.toCharArray();
+		for (int i = 0; i < c.length; i++) {
+			letters.add(c[i]);
+		}
+		Collections.shuffle(letters);
+		StringBuilder builder = new StringBuilder(letters.size());
+		for (int i = 0; i < letters.size(); i++) {
+			builder.append(letters.get(i));
+		}
+		return builder.toString();
 	}
 	
 	public static void stripSpecialChars(List<String> list) {
