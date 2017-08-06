@@ -83,6 +83,26 @@ public final class ServiceLocator {
 			initializedServices.put(clazz, initializeService(clazz));
 		}
 	}
+	public synchronized static void provideService(Object initializedService) {
+		if (initializedService == null) {
+			throw new ArgumentNullException("initializedService");
+		}
+		
+		Class<?> clazz = initializedService.getClass();
+		
+		// Destroy any existing services and cache
+		initializedServices.remove(clazz);
+		lookupCache.entrySet().removeIf(v -> ReflectUtil.doesExtend(v.getKey(), clazz));
+		
+		int index = services.indexOf(clazz);
+		if (index > -1) {
+			services.set(index, clazz);
+		} else {
+			services.add(clazz);
+		}
+		
+		initializedServices.put(clazz, initializedService);
+	}
 	@SuppressWarnings("unchecked")
 	public synchronized static <T> List<T> removeServices(Class<T> clazz) {
 		if (clazz == null) {

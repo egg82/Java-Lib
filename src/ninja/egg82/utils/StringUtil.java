@@ -1,6 +1,7 @@
 package ninja.egg82.utils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -35,14 +36,20 @@ public final class StringUtil {
 		return builder.toString();
 	}
 	
+	public static String stripSpecialChars(String input, boolean keepWhitespace) {
+		return input.replaceAll((keepWhitespace) ? "[^a-zA-Z0-9\\s]" : "[^a-zA-Z0-9]", "");
+	}
 	public static void stripSpecialChars(List<String> list) {
 		for (int i = 0; i < list.size(); i++) {
 			list.set(i, list.get(i).replaceAll("[^a-zA-Z0-9]", ""));
 		}
 	}
-	public static void stripCommonWords(List<String> list) {
+	public static String stripCommonWords(String input) {
+		return String.join(" ", stripCommonWords(new ArrayList<String>(Arrays.asList(input.split("\\s")))));
+	}
+	public static List<String> stripCommonWords(List<String> list) {
 		if (list == null || list.size() == 0) {
-			return;
+			return list;
 		}
 		
 		for (int i = list.size() - 1; i >= 0; i--) {
@@ -153,6 +160,8 @@ public final class StringUtil {
 				list.remove(i);
 			}
 		}
+		
+		return list;
 	}
 	
 	public static String repeatChar(char character, int length) {
