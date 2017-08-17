@@ -45,6 +45,7 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 		List<LogRecord> records = responseHandler.getUnsentLogs();
 		responseHandler.clearLogs();
 		for (LogRecord record : records) {
+			rewriteFilename(record);
 			responseHandler.setLastLog(record);
 			if (record.getThrown() != null) {
 				rollbar.log(record.getThrown(), getLevel(record.getLevel()));
@@ -55,6 +56,7 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 		List<Exception> exceptions = responseHandler.getUnsentExceptions();
 		responseHandler.clearExceptions();
 		for (Exception ex : exceptions) {
+			rewriteFilename(ex);
 			responseHandler.setLastException(ex);
 			rollbar.log(ex);
 		}
@@ -82,6 +84,7 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	}
 	public void silentException(Exception ex) {
 		if (rollbar != null) {
+			rewriteFilename(ex);
 			responseHandler.setLastException(ex);
 			rollbar.log(ex);
 		} else {
@@ -90,6 +93,7 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	}
 	public void throwException(RuntimeException ex) {
 		if (rollbar != null) {
+			rewriteFilename(ex);
 			responseHandler.setLastException(ex);
 			rollbar.log(ex);
 		} else {
@@ -100,6 +104,7 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	
 	public void publish(LogRecord record) {
 		if (rollbar != null) {
+			rewriteFilename(record);
 			responseHandler.setLastLog(record);
 			if (record.getThrown() != null) {
 				rollbar.log(record.getThrown(), getLevel(record.getLevel()));
@@ -127,6 +132,7 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 			List<Exception> exceptions = responseHandler.getUnsentExceptions();
 			responseHandler.clearExceptions();
 			for (Exception ex : exceptions) {
+				rewriteFilename(ex);
 				responseHandler.setLastException(ex);
 				rollbar.log(ex);
 			}
@@ -142,6 +148,7 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 			List<LogRecord> records = responseHandler.getUnsentLogs();
 			responseHandler.clearLogs();
 			for (LogRecord record : records) {
+				rewriteFilename(record);
 				responseHandler.setLastLog(record);
 				if (record.getThrown() != null) {
 					rollbar.log(record.getThrown(), getLevel(record.getLevel()));
@@ -177,6 +184,7 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 		}
 		thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
 			public void uncaughtException(Thread t, Throwable ex) {
+				rewriteFilename(ex);
 				responseHandler.setLastException(ex);
 				rollbar.log(ex);
 			}
@@ -194,6 +202,7 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 			List<LogRecord> records = responseHandler.getUnsentLogs();
 			responseHandler.clearLogs();
 			for (LogRecord record : records) {
+				rewriteFilename(record);
 				responseHandler.setLastLog(record);
 				if (record.getThrown() != null) {
 					rollbar.log(record.getThrown(), getLevel(record.getLevel()));
@@ -204,6 +213,7 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 			List<Exception> exceptions = responseHandler.getUnsentExceptions();
 			responseHandler.clearExceptions();
 			for (Exception ex : exceptions) {
+				rewriteFilename(ex);
 				responseHandler.setLastException(ex);
 				rollbar.log(ex);
 			}
@@ -214,4 +224,19 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 			errorThreads.removeIf((v) -> (!v.isAlive()));
 		}
 	};
+	
+	private void rewriteFilename(Throwable ex) {
+		StackTraceElement[] elements = ex.getStackTrace();
+		for (int i = 0; i < elements.length; i++) {
+			if (elements[i].getFileName() == null) {
+				elements[i] = new StackTraceElement(elements[i].getClassName(), elements[i].getMethodName(), "[unknown]", elements[i].getLineNumber());
+			}
+		}
+		ex.setStackTrace(elements);
+	}
+	private void rewriteFilename(LogRecord record) {
+		Throwable ex = record.getThrown();
+		rewriteFilename(ex);
+		record.setThrown(ex);
+	}
 }

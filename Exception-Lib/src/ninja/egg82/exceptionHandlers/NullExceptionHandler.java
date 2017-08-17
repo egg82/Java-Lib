@@ -5,8 +5,6 @@ import java.util.List;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 
-import org.apache.commons.lang.NotImplementedException;
-
 import ninja.egg82.exceptionHandlers.builders.IBuilder;
 
 public class NullExceptionHandler extends Handler implements IExceptionHandler {
@@ -21,7 +19,7 @@ public class NullExceptionHandler extends Handler implements IExceptionHandler {
 	
 	//public
 	public void connect(IBuilder builder) {
-		throw new NotImplementedException("This API does not support sending exceptions.");
+		throw new RuntimeException("This API does not support sending exceptions.");
 	}
 	public void disconnect() {
 		

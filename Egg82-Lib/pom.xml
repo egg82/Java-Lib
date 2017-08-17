@@ -72,8 +72,8 @@
   </build>
   <parent>
     <groupId>ninja.egg82.lib</groupId>
-    <artifactId>plugin-lib-parent</artifactId>
-    <version>1.7.35</version>
+    <artifactId>egg82-lib-parent</artifactId>
+    <version>1.5.19</version>
   </parent>
   <repositories>
   </repositories>
