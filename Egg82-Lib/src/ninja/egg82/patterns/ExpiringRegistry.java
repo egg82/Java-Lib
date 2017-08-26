@@ -191,7 +191,8 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 	
 	//private
 	private final synchronized void onRegisterExpiration(K key, Pair<Class<?>, Object> value) {
-		removeRegister(key);
+		reverseRegistry.remove(value.getRight());
+		keysDirty = true;
 		expire.invoke(this, new ExpireEventArgs<K>(key, value.getLeft(), value.getRight()));
 	}
 }

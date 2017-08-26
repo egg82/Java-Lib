@@ -48,9 +48,17 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 			rewriteFilename(record);
 			responseHandler.setLastLog(record);
 			if (record.getThrown() != null) {
-				rollbar.log(record.getThrown(), getLevel(record.getLevel()));
+				try {
+					rollbar.log(record.getThrown(), getLevel(record.getLevel()));
+				} catch (Exception ex) {
+					responseHandler.addException(ex);
+				}
 			} else if (record.getMessage() != null) {
-				rollbar.log(record.getMessage(), getLevel(record.getLevel()));
+				try {
+					rollbar.log(record.getMessage(), getLevel(record.getLevel()));
+				} catch (Exception ex) {
+					responseHandler.addException(ex);
+				}
 			}
 		}
 		List<Exception> exceptions = responseHandler.getUnsentExceptions();
@@ -58,7 +66,11 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 		for (Exception ex : exceptions) {
 			rewriteFilename(ex);
 			responseHandler.setLastException(ex);
-			rollbar.log(ex);
+			try {
+				rollbar.log(ex);
+			} catch (Exception ex2) {
+				responseHandler.addException(ex2);
+			}
 		}
 		
 		resendTimer = new Timer(60 * 60 * 1000, onResendTimer);
@@ -86,7 +98,11 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 		if (rollbar != null) {
 			rewriteFilename(ex);
 			responseHandler.setLastException(ex);
-			rollbar.log(ex);
+			try {
+				rollbar.log(ex);
+			} catch (Exception ex2) {
+				responseHandler.addException(ex2);
+			}
 		} else {
 			responseHandler.addException(ex);
 		}
@@ -95,7 +111,11 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 		if (rollbar != null) {
 			rewriteFilename(ex);
 			responseHandler.setLastException(ex);
-			rollbar.log(ex);
+			try {
+				rollbar.log(ex);
+			} catch (Exception ex2) {
+				responseHandler.addException(ex2);
+			}
 		} else {
 			responseHandler.addException(ex);
 		}
@@ -107,9 +127,17 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 			rewriteFilename(record);
 			responseHandler.setLastLog(record);
 			if (record.getThrown() != null) {
-				rollbar.log(record.getThrown(), getLevel(record.getLevel()));
+				try {
+					rollbar.log(record.getThrown(), getLevel(record.getLevel()));
+				} catch (Exception ex) {
+					responseHandler.addException(ex);
+				}
 			} else if (record.getMessage() != null) {
-				rollbar.log(record.getMessage(), getLevel(record.getLevel()));
+				try {
+					rollbar.log(record.getMessage(), getLevel(record.getLevel()));
+				} catch (Exception ex) {
+					responseHandler.addException(ex);
+				}
 			}
 		} else {
 			responseHandler.addLog(record);
@@ -134,7 +162,11 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 			for (Exception ex : exceptions) {
 				rewriteFilename(ex);
 				responseHandler.setLastException(ex);
-				rollbar.log(ex);
+				try {
+					rollbar.log(ex);
+				} catch (Exception ex2) {
+					responseHandler.addException(ex2);
+				}
 			}
 		}
 	}
@@ -151,9 +183,17 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 				rewriteFilename(record);
 				responseHandler.setLastLog(record);
 				if (record.getThrown() != null) {
-					rollbar.log(record.getThrown(), getLevel(record.getLevel()));
+					try {
+						rollbar.log(record.getThrown(), getLevel(record.getLevel()));
+					} catch (Exception ex) {
+						responseHandler.addException(ex);
+					}
 				} else if (record.getMessage() != null) {
-					rollbar.log(record.getMessage(), getLevel(record.getLevel()));
+					try {
+						rollbar.log(record.getMessage(), getLevel(record.getLevel()));
+					} catch (Exception ex) {
+						responseHandler.addException(ex);
+					}
 				}
 			}
 		}
@@ -186,7 +226,11 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 			public void uncaughtException(Thread t, Throwable ex) {
 				rewriteFilename(ex);
 				responseHandler.setLastException(ex);
-				rollbar.log(ex);
+				try {
+					rollbar.log(ex);
+				} catch (Exception ex2) {
+					responseHandler.addException(ex2);
+				}
 			}
 		});
 	}
@@ -205,9 +249,17 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 				rewriteFilename(record);
 				responseHandler.setLastLog(record);
 				if (record.getThrown() != null) {
-					rollbar.log(record.getThrown(), getLevel(record.getLevel()));
+					try {
+						rollbar.log(record.getThrown(), getLevel(record.getLevel()));
+					} catch (Exception ex) {
+						responseHandler.addException(ex);
+					}
 				} else if (record.getMessage() != null) {
-					rollbar.log(record.getMessage(), getLevel(record.getLevel()));
+					try {
+						rollbar.log(record.getMessage(), getLevel(record.getLevel()));
+					} catch (Exception ex) {
+						responseHandler.addException(ex);
+					}
 				}
 			}
 			List<Exception> exceptions = responseHandler.getUnsentExceptions();
@@ -215,7 +267,11 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 			for (Exception ex : exceptions) {
 				rewriteFilename(ex);
 				responseHandler.setLastException(ex);
-				rollbar.log(ex);
+				try {
+					rollbar.log(ex);
+				} catch (Exception ex2) {
+					responseHandler.addException(ex2);
+				}
 			}
 		}
 	};
