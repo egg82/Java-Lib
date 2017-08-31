@@ -1,5 +1,7 @@
 package ninja.egg82.patterns.tuples;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
+
 import ninja.egg82.utils.ReflectUtil;
 
 public class Unit<T> {
@@ -36,6 +38,9 @@ public class Unit<T> {
 		}
 		
 		return false;
+	}
+	public int hashCode() {
+		return new HashCodeBuilder(1938359, 1938301).append(type).toHashCode();
 	}
 	
 	//private

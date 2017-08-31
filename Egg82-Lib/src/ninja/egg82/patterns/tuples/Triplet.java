@@ -1,5 +1,7 @@
 package ninja.egg82.patterns.tuples;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
+
 import ninja.egg82.utils.ReflectUtil;
 
 public class Triplet<L, C, R> {
@@ -52,6 +54,9 @@ public class Triplet<L, C, R> {
 		}
 		
 		return false;
+	}
+	public int hashCode() {
+		return new HashCodeBuilder(938402693, 23487979).append(left).append(center).append(right).toHashCode();
 	}
 	
 	//private

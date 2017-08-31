@@ -1,5 +1,7 @@
 package ninja.egg82.patterns.tuples;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
+
 import ninja.egg82.utils.ReflectUtil;
 
 public final class Pair<L, R> {
@@ -44,6 +46,9 @@ public final class Pair<L, R> {
 		}
 		
 		return false;
+	}
+	public int hashCode() {
+		return new HashCodeBuilder(13048583, 9832513).append(left).append(right).toHashCode();
 	}
 	
 	//private
