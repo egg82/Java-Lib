@@ -28,6 +28,9 @@ public class NullExceptionHandler extends Handler implements IExceptionHandler {
 	public void addThread(Thread thread) {
 		
 	}
+	public void removeThread(Thread thread) {
+		
+	}
 	public void silentException(Exception ex) {
 		exceptions.add(ex);
 	}

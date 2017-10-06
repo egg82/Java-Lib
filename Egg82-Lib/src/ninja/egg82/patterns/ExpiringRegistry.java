@@ -24,14 +24,17 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 	private final EventHandler<ExpireEventArgs<K>> expire = new EventHandler<ExpireEventArgs<K>>();
 	
 	//constructor
-	@SuppressWarnings("unchecked")
 	public ExpiringRegistry(Class<K> keyClass, long registerExpirationTimeMilliseconds) {
+		this(keyClass, registerExpirationTimeMilliseconds, ExpirationPolicy.CREATED);
+	}
+	@SuppressWarnings("unchecked")
+	public ExpiringRegistry(Class<K> keyClass, long registerExpirationTimeMilliseconds, ExpirationPolicy expirationPolicy) {
 		this.keyClass = keyClass;
 		keyCache = (K[]) Array.newInstance(keyClass, 0);
 		
 		registry = ExpiringMap.builder()
 			.expiration(registerExpirationTimeMilliseconds, TimeUnit.MILLISECONDS)
-			.expirationPolicy(ExpirationPolicy.CREATED)
+			.expirationPolicy(expirationPolicy)
 			.expirationListener((k, v) -> onRegisterExpiration((K) k, (Pair<Class<?>, Object>) v))
 			.build();
 	}

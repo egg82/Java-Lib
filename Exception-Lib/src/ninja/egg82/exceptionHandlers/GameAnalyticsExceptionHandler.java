@@ -66,9 +66,15 @@ public class GameAnalyticsExceptionHandler extends Handler implements IException
 	}
 	
 	public void addThread(Thread thread) {
-		if (api != null) {
-			api.handleUncaughtErrors(thread);
+		if (api != null && !errorThreads.contains(thread)) {
 			errorThreads.add(thread);
+			api.handleUncaughtErrors(thread);
+		}
+	}
+	public void removeThread(Thread thread) {
+		if (api != null && errorThreads.contains(thread)) {
+			api.unhandleUncaughtErrors(thread);
+			errorThreads.remove(thread);
 		}
 	}
 	public void silentException(Exception ex) {

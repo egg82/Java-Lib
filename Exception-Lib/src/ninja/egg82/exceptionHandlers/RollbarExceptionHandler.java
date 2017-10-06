@@ -89,9 +89,15 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	}
 	
 	public void addThread(Thread thread) {
-		if (rollbar != null) {
-			handleUncaughtErrors(thread);
+		if (rollbar != null && !errorThreads.contains(thread)) {
 			errorThreads.add(thread);
+			handleUncaughtErrors(thread);
+		}
+	}
+	public void removeThread(Thread thread) {
+		if (rollbar != null && errorThreads.contains(thread)) {
+			unhandleUncaughtErrors(thread);
+			errorThreads.remove(thread);
 		}
 	}
 	public void silentException(Exception ex) {

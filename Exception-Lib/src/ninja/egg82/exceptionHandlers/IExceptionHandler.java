@@ -11,6 +11,7 @@ public interface IExceptionHandler {
 	void disconnect();
 	
 	void addThread(Thread thread);
+	void removeThread(Thread thread);
 	void silentException(Exception ex);
 	void throwException(RuntimeException ex);
 	
