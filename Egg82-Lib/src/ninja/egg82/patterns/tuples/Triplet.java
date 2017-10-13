@@ -49,7 +49,11 @@ public class Triplet<L, C, R> {
 		}
 		
 		Triplet<?, ?, ?> t = (Triplet<?, ?, ?>) obj;
-		if (t.getLeft().equals(left) && t.getCenter().equals(center) && t.getRight().equals(right)) {
+		if (
+			((t.getLeft() == null && left == null) || t.getLeft().equals(left))
+			&& ((t.getCenter() == null && center == null) || t.getCenter().equals(center))
+			&& ((t.getRight() == null && right == null) || t.getRight().equals(right))
+		) {
 			return true;
 		}
 		

@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>crypto-lib</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
   <name>egg82-crypto-lib</name>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -50,20 +50,21 @@
       </plugin>
     </plugins>
   </build>
-  <parent>
+  <!-- <parent>
     <groupId>ninja.egg82.lib</groupId>
     <artifactId>egg82-lib-parent</artifactId>
     <version>1.5.19</version>
-  </parent>
+  </parent> -->
   <repositories>
   </repositories>
   <dependencies>
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk15on</artifactId>
-      <version>1.57</version>
+      <version>1.58</version>
     </dependency>
   </dependencies>
   <description>Wrapper for cryptographic operations</description>
   <url>https://www.egg82.ninja</url>
+  <groupId>ninja.egg82.lib</groupId>
 </project>

@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>exception-lib</artifactId>
-  <version>1.0.3</version>
+  <version>1.0.4</version>
   <name>egg82-exception-lib</name>
   <description>Library for easy error reporting</description>
   <build>
@@ -55,11 +55,11 @@
       </plugin>
     </plugins>
   </build>
-  <parent>
+  <!-- <parent>
     <groupId>ninja.egg82.lib</groupId>
     <artifactId>egg82-lib-parent</artifactId>
     <version>1.5.19</version>
-  </parent>
+  </parent> -->
   <repositories>
     <repository>
       <id>egg82-ninja</id>
@@ -70,12 +70,12 @@
     <dependency>
       <groupId>ninja.egg82.lib</groupId>
       <artifactId>egg82-lib</artifactId>
-      <version>[0.0.0,)</version>
+      <version>[1.5.24,)</version>
     </dependency>
     <dependency>
       <groupId>ninja.egg82.lib</groupId>
       <artifactId>crypto-lib</artifactId>
-      <version>[0.0.0,)</version>
+      <version>[1.0.1,)</version>
     </dependency>
     <dependency>
       <groupId>com.rollbar</groupId>
@@ -85,7 +85,8 @@
     <dependency>
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>
-      <version>[20170101,)</version>
+      <version>20170516</version>
     </dependency>
   </dependencies>
+  <groupId>ninja.egg82.lib</groupId>
 </project>

@@ -17,6 +17,7 @@ import com.rollbar.payload.data.Person;
 import ninja.egg82.core.LoggingRollbarResponseHandler;
 import ninja.egg82.exceptionHandlers.builders.IBuilder;
 import ninja.egg82.exceptions.ArgumentNullException;
+import ninja.egg82.patterns.tuples.Pair;
 
 public class RollbarExceptionHandler extends Handler implements IExceptionHandler {
 	//vars
@@ -42,32 +43,34 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 		rollbar = new Rollbar(params[0], params[1]).codeVersion(params[2]).responseHandler(responseHandler).person(new Person(params[3]));
 		handleUncaughtErrors(Thread.currentThread());
 		
-		List<LogRecord> records = responseHandler.getUnsentLogs();
+		List<Pair<LogRecord, Integer>> records = responseHandler.getUnsentLogs();
 		responseHandler.clearLogs();
-		for (LogRecord record : records) {
-			rewriteFilename(record);
-			responseHandler.setLastLog(record);
-			if (record.getThrown() != null) {
+		for (Pair<LogRecord, Integer> record : records) {
+			rewriteFilename(record.getLeft());
+			responseHandler.setLastLog(record.getLeft());
+			responseHandler.setTries(record.getRight());
+			if (record.getLeft().getThrown() != null) {
 				try {
-					rollbar.log(record.getThrown(), getLevel(record.getLevel()));
+					rollbar.log(record.getLeft().getThrown(), getLevel(record.getLeft().getLevel()));
 				} catch (Exception ex) {
 					responseHandler.addException(ex);
 				}
-			} else if (record.getMessage() != null) {
+			} else if (record.getLeft().getMessage() != null) {
 				try {
-					rollbar.log(record.getMessage(), getLevel(record.getLevel()));
+					rollbar.log(record.getLeft().getMessage(), getLevel(record.getLeft().getLevel()));
 				} catch (Exception ex) {
 					responseHandler.addException(ex);
 				}
 			}
 		}
-		List<Exception> exceptions = responseHandler.getUnsentExceptions();
+		List<Pair<Exception, Integer>> exceptions = responseHandler.getUnsentExceptions();
 		responseHandler.clearExceptions();
-		for (Exception ex : exceptions) {
-			rewriteFilename(ex);
-			responseHandler.setLastException(ex);
+		for (Pair<Exception, Integer> ex : exceptions) {
+			rewriteFilename(ex.getLeft());
+			responseHandler.setLastException(ex.getLeft());
+			responseHandler.setTries(ex.getRight());
 			try {
-				rollbar.log(ex);
+				rollbar.log(ex.getLeft());
 			} catch (Exception ex2) {
 				responseHandler.addException(ex2);
 			}
@@ -157,19 +160,25 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	}
 	
 	public List<Exception> getUnsentExceptions() {
-		return responseHandler.getUnsentExceptions();
+		ArrayList<Exception> retVal = new ArrayList<Exception>();
+		List<Pair<Exception, Integer>> logs = responseHandler.getUnsentExceptions();
+		logs.forEach((v) -> {
+			retVal.add(v.getLeft());
+		});
+		return retVal;
 	}
 	public void setUnsentExceptions(List<Exception> list) {
 		responseHandler.setUnsentExceptions(list);
 		
 		if (rollbar != null) {
-			List<Exception> exceptions = responseHandler.getUnsentExceptions();
+			List<Pair<Exception, Integer>> exceptions = responseHandler.getUnsentExceptions();
 			responseHandler.clearExceptions();
-			for (Exception ex : exceptions) {
-				rewriteFilename(ex);
-				responseHandler.setLastException(ex);
+			for (Pair<Exception, Integer> ex : exceptions) {
+				rewriteFilename(ex.getLeft());
+				responseHandler.setLastException(ex.getLeft());
+				responseHandler.setTries(ex.getRight());
 				try {
-					rollbar.log(ex);
+					rollbar.log(ex.getLeft());
 				} catch (Exception ex2) {
 					responseHandler.addException(ex2);
 				}
@@ -177,26 +186,32 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 		}
 	}
 	public List<LogRecord> getUnsentLogs() {
-		return responseHandler.getUnsentLogs();
+		ArrayList<LogRecord> retVal = new ArrayList<LogRecord>();
+		List<Pair<LogRecord, Integer>> logs = responseHandler.getUnsentLogs();
+		logs.forEach((v) -> {
+			retVal.add(v.getLeft());
+		});
+		return retVal;
 	}
 	public void setUnsentLogs(List<LogRecord> list) {
 		responseHandler.setUnsentLogs(list);
 		
 		if (rollbar != null) {
-			List<LogRecord> records = responseHandler.getUnsentLogs();
+			List<Pair<LogRecord, Integer>> records = responseHandler.getUnsentLogs();
 			responseHandler.clearLogs();
-			for (LogRecord record : records) {
-				rewriteFilename(record);
-				responseHandler.setLastLog(record);
-				if (record.getThrown() != null) {
+			for (Pair<LogRecord, Integer> record : records) {
+				rewriteFilename(record.getLeft());
+				responseHandler.setLastLog(record.getLeft());
+				responseHandler.setTries(record.getRight());
+				if (record.getLeft().getThrown() != null) {
 					try {
-						rollbar.log(record.getThrown(), getLevel(record.getLevel()));
+						rollbar.log(record.getLeft().getThrown(), getLevel(record.getLeft().getLevel()));
 					} catch (Exception ex) {
 						responseHandler.addException(ex);
 					}
-				} else if (record.getMessage() != null) {
+				} else if (record.getLeft().getMessage() != null) {
 					try {
-						rollbar.log(record.getMessage(), getLevel(record.getLevel()));
+						rollbar.log(record.getLeft().getMessage(), getLevel(record.getLeft().getLevel()));
 					} catch (Exception ex) {
 						responseHandler.addException(ex);
 					}
@@ -231,7 +246,11 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 		thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
 			public void uncaughtException(Thread t, Throwable ex) {
 				rewriteFilename(ex);
-				responseHandler.setLastException(ex);
+				if (!(ex instanceof Exception)) {
+					ex = new Exception(ex);
+				}
+				responseHandler.setLastException((Exception) ex);
+				responseHandler.setTries(0);
 				try {
 					rollbar.log(ex);
 				} catch (Exception ex2) {
@@ -249,32 +268,34 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	
 	private ActionListener onResendTimer = new ActionListener() {
 		public void actionPerformed(ActionEvent e) {
-			List<LogRecord> records = responseHandler.getUnsentLogs();
+			List<Pair<LogRecord, Integer>> records = responseHandler.getUnsentLogs();
 			responseHandler.clearLogs();
-			for (LogRecord record : records) {
-				rewriteFilename(record);
-				responseHandler.setLastLog(record);
-				if (record.getThrown() != null) {
+			for (Pair<LogRecord, Integer> record : records) {
+				rewriteFilename(record.getLeft());
+				responseHandler.setLastLog(record.getLeft());
+				responseHandler.setTries(record.getRight());
+				if (record.getLeft().getThrown() != null) {
 					try {
-						rollbar.log(record.getThrown(), getLevel(record.getLevel()));
+						rollbar.log(record.getLeft().getThrown(), getLevel(record.getLeft().getLevel()));
 					} catch (Exception ex) {
 						responseHandler.addException(ex);
 					}
-				} else if (record.getMessage() != null) {
+				} else if (record.getLeft().getMessage() != null) {
 					try {
-						rollbar.log(record.getMessage(), getLevel(record.getLevel()));
+						rollbar.log(record.getLeft().getMessage(), getLevel(record.getLeft().getLevel()));
 					} catch (Exception ex) {
 						responseHandler.addException(ex);
 					}
 				}
 			}
-			List<Exception> exceptions = responseHandler.getUnsentExceptions();
+			List<Pair<Exception, Integer>> exceptions = responseHandler.getUnsentExceptions();
 			responseHandler.clearExceptions();
-			for (Exception ex : exceptions) {
-				rewriteFilename(ex);
-				responseHandler.setLastException(ex);
+			for (Pair<Exception, Integer> ex : exceptions) {
+				rewriteFilename(ex.getLeft());
+				responseHandler.setLastException(ex.getLeft());
+				responseHandler.setTries(ex.getRight());
 				try {
-					rollbar.log(ex);
+					rollbar.log(ex.getLeft());
 				} catch (Exception ex2) {
 					responseHandler.addException(ex2);
 				}

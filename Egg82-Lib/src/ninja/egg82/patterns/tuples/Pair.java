@@ -41,7 +41,10 @@ public final class Pair<L, R> {
 		}
 		
 		Pair<?, ?> p = (Pair<?, ?>) obj;
-		if (p.getLeft().equals(left) && p.getRight().equals(right)) {
+		if (
+			((p.getLeft() == null && left == null) || p.getLeft().equals(left))
+			&& ((p.getRight() == null && right == null) || p.getRight().equals(right))
+		) {
 			return true;
 		}
 		

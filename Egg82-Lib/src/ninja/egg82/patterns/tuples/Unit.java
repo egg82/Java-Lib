@@ -33,7 +33,7 @@ public class Unit<T> {
 		}
 		
 		Unit<?> u = (Unit<?>) obj;
-		if (u.getType().equals(type)) {
+		if (((u.getType() == null && type == null) || u.getType().equals(type))) {
 			return true;
 		}
 		
