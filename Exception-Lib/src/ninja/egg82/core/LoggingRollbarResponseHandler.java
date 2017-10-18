@@ -8,18 +8,20 @@ import com.rollbar.sender.RollbarResponse;
 import com.rollbar.sender.RollbarResponseCode;
 import com.rollbar.sender.RollbarResponseHandler;
 
+import ninja.egg82.patterns.DynamicObjectPool;
+import ninja.egg82.patterns.IObjectPool;
 import ninja.egg82.patterns.tuples.Pair;
 
 public class LoggingRollbarResponseHandler implements RollbarResponseHandler {
 	//vars
-	private ArrayList<Pair<LogRecord, Integer>> logs = new ArrayList<Pair<LogRecord, Integer>>();
-	private ArrayList<Pair<Exception, Integer>> exceptions = new ArrayList<Pair<Exception, Integer>>();
+	private IObjectPool<Pair<LogRecord, Integer>> logs = new DynamicObjectPool<Pair<LogRecord, Integer>>();
+	private IObjectPool<Pair<Exception, Integer>> exceptions = new DynamicObjectPool<Pair<Exception, Integer>>();
 	
-	private Exception lastException = null;
-	private int tries = 0;
-	private LogRecord lastLog = null;
+	private volatile Exception lastException = null;
+	private volatile int tries = 0;
+	private volatile LogRecord lastLog = null;
 	
-	public boolean limitReached = false;
+	public volatile boolean limitReached = false;
 	
 	//constructor
 	public LoggingRollbarResponseHandler() {
@@ -37,6 +39,7 @@ public class LoggingRollbarResponseHandler implements RollbarResponseHandler {
 					lastException = null;
 				} else if (lastLog != null) {
 					logs.add(new Pair<LogRecord, Integer>(lastLog, tries));
+					lastLog = null;
 				}
 			} else {
 				if (tries < 1) {
@@ -45,15 +48,15 @@ public class LoggingRollbarResponseHandler implements RollbarResponseHandler {
 						lastException = null;
 					} else if (lastLog != null) {
 						logs.add(new Pair<LogRecord, Integer>(lastLog, tries + 1));
+						lastLog = null;
 					}
 				}
 			}
 		}
 	}
 	
-	@SuppressWarnings("unchecked")
 	public List<Pair<Exception, Integer>> getUnsentExceptions() {
-		return (List<Pair<Exception, Integer>>) exceptions.clone();
+		return new ArrayList<Pair<Exception, Integer>>(exceptions);
 	}
 	public void setUnsentExceptions(List<Exception> list) {
 		exceptions.clear();
@@ -61,9 +64,8 @@ public class LoggingRollbarResponseHandler implements RollbarResponseHandler {
 			exceptions.add(new Pair<Exception, Integer>(v, 0));
 		});
 	}
-	@SuppressWarnings("unchecked")
 	public List<Pair<LogRecord, Integer>> getUnsentLogs() {
-		return (List<Pair<LogRecord, Integer>>) logs.clone();
+		return new ArrayList<Pair<LogRecord, Integer>>(logs);
 	}
 	public void setUnsentLogs(List<LogRecord> list) {
 		logs.clear();

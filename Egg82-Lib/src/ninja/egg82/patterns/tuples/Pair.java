@@ -6,8 +6,8 @@ import ninja.egg82.utils.ReflectUtil;
 
 public final class Pair<L, R> {
 	//vars
-	private L left = null;
-	private R right = null;
+	private volatile L left = null;
+	private volatile R right = null;
 	
 	//constructor
 	public Pair(L left, R right) {
@@ -41,9 +41,11 @@ public final class Pair<L, R> {
 		}
 		
 		Pair<?, ?> p = (Pair<?, ?>) obj;
+		final Object l = p.left;
+		final Object r = p.right;
 		if (
-			((p.getLeft() == null && left == null) || p.getLeft().equals(left))
-			&& ((p.getRight() == null && right == null) || p.getRight().equals(right))
+			((l == null && left == null) || (l != null && l.equals(left)))
+			&& ((r == null && right == null) || (r != null && r.equals(right)))
 		) {
 			return true;
 		}

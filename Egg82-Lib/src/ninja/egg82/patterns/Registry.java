@@ -1,19 +1,20 @@
 package ninja.egg82.patterns;
 
 import java.lang.reflect.Array;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import ninja.egg82.exceptions.ArgumentNullException;
 import ninja.egg82.patterns.tuples.Pair;
+import ninja.egg82.patterns.tuples.Unit;
 import ninja.egg82.utils.ReflectUtil;
 
 public class Registry<K> implements IRegistry<K> {
 	//vars
 	private Class<K> keyClass = null;
 	private K[] keyCache = null;
-	private boolean keysDirty = false;
-	private HashMap<K, Pair<Class<?>, Object>> registry = new HashMap<K, Pair<Class<?>, Object>>();
-	private HashMap<Object, K> reverseRegistry = new HashMap<Object, K>();
+	private volatile boolean keysDirty = false;
+	private ConcurrentHashMap<K, Pair<Class<?>, Unit<Object>>> registry = new ConcurrentHashMap<K, Pair<Class<?>, Unit<Object>>>();
+	private ConcurrentHashMap<Unit<Object>, K> reverseRegistry = new ConcurrentHashMap<Unit<Object>, K>();
 	
 	//constructor
 	@SuppressWarnings("unchecked")
@@ -23,13 +24,14 @@ public class Registry<K> implements IRegistry<K> {
 	}
 	
 	//public
-	public final synchronized void setRegister(K key, Object data) {
+	public final void setRegister(K key, Object data) {
 		if (key == null) {
 			throw new ArgumentNullException("key");
 		}
 		
-		Pair<Class<?>, Object> pair = registry.get(key);
-		registry.put(key, new Pair<Class<?>, Object>((data != null) ? data.getClass() : null, data));
+		Pair<Class<?>, Unit<Object>> pair = registry.get(key);
+		Unit<Object> unit = new Unit<Object>(data);
+		registry.put(key, new Pair<Class<?>, Unit<Object>>((data != null) ? data.getClass() : null, unit));
 		
 		if (pair == null) {
 			// Key didn't exist before. Added.
@@ -39,65 +41,65 @@ public class Registry<K> implements IRegistry<K> {
 			reverseRegistry.remove(pair.getRight());
 		}
 		
-		reverseRegistry.put(data, key);
+		reverseRegistry.put(unit, key);
 	}
-	public final synchronized Object removeRegister(K key) {
+	public final Object removeRegister(K key) {
 		if (key == null) {
 			throw new ArgumentNullException("key");
 		}
 		
-		Pair<Class<?>, Object> pair = registry.get(key);
+		Pair<Class<?>, Unit<Object>> pair = registry.get(key);
 		if (pair != null) {
 			registry.remove(key);
 			reverseRegistry.remove(pair.getRight());
 			keysDirty = true;
-			return pair.getRight();
+			return pair.getRight().getType();
 		}
 		return null;
 	}
 	@SuppressWarnings("unchecked")
-	public final synchronized <T> T removeRegister(K key, Class<T> type) {
+	public final <T> T removeRegister(K key, Class<T> type) {
 		if (key == null) {
 			throw new ArgumentNullException("key");
 		}
 		
-		Pair<Class<?>, Object> pair = registry.get(key);
+		Pair<Class<?>, Unit<Object>> pair = registry.get(key);
 		if (pair != null) {
 			registry.remove(key);
 			reverseRegistry.remove(pair.getRight());
 			keysDirty = true;
 			
-			if (pair.getRight() == null) {
+			if (pair.getRight().getType() == null) {
 				return null;
 			}
 			
 			if (!ReflectUtil.doesExtend(type, pair.getLeft())) {
 				try {
-					return type.cast(pair.getRight());
+					return type.cast(pair.getRight().getType());
 				} catch (Exception ex) {
 					throw new RuntimeException("data type cannot be converted to the type specified.", ex);
 				}
 			} else {
-				return (T) pair.getRight();
+				return (T) pair.getRight().getType();
 			}
 		}
 		return null;
 	}
 	
-	public final synchronized Object getRegister(K key) {
+	public final Object getRegister(K key) {
 		if (key == null) {
 			throw new ArgumentNullException("key");
 		}
 		
-		Pair<Class<?>, Object> result = registry.get(key);
+		Pair<Class<?>, Unit<Object>> result = registry.get(key);
 		
 		if (result != null) {
-			return result.getRight();
+			return result.getRight().getType();
 		}
 		return null;
 	}
 	@SuppressWarnings("unchecked")
-	public final synchronized <T> T getRegister(K key, Class<T> type) {
+	public final <T> T getRegister(K key, Class<T> type) {
 		if (key == null) {
 			throw new ArgumentNullException("key");
 		}
@@ -105,10 +107,10 @@ public class Registry<K> implements IRegistry<K> {
 			throw new ArgumentNullException("type");
 		}
 		
-		Pair<Class<?>, Object> result = registry.get(key);
+		Pair<Class<?>, Unit<Object>> result = registry.get(key);
 		
 		if (result != null) {
-			Object data = result.getRight();
+			Object data = result.getRight().getType();
 			if (data == null) {
 				return null;
 			}
@@ -124,15 +126,15 @@ public class Registry<K> implements IRegistry<K> {
 		}
 		return null;
 	}
-	public final synchronized K getKey(Object data) {
-		return reverseRegistry.get(data);
+	public final K getKey(Object data) {
+		return reverseRegistry.get(new Unit<Object>(data));
 	}
-	public final synchronized Class<?> getRegisterClass(K key) {
+	public final Class<?> getRegisterClass(K key) {
 		if (key == null) {
 			throw new ArgumentNullException("key");
 		}
 		
-		Pair<Class<?>, Object> result = registry.get(key);
+		Pair<Class<?>, Unit<Object>> result = registry.get(key);
 		
 		if (result != null) {
 			return result.getLeft();
@@ -140,22 +142,22 @@ public class Registry<K> implements IRegistry<K> {
 		return null;
 	}
 	
-	public final synchronized Class<K> getKeyClass() {
+	public final Class<K> getKeyClass() {
 		return keyClass;
 	}
 	
-	public final synchronized boolean hasRegister(K key) {
+	public final boolean hasRegister(K key) {
 		if (key == null) {
 			return false;
 		}
 		return registry.containsKey(key);
 	}
-	public final synchronized boolean hasValue(Object data) {
-		return reverseRegistry.containsKey(data);
+	public final boolean hasValue(Object data) {
+		return reverseRegistry.containsKey(new Unit<Object>(data));
 	}
 	
 	@SuppressWarnings("unchecked")
-	public final synchronized void clear() {
+	public final void clear() {
 		registry.clear();
 		reverseRegistry.clear();
 		keyCache = (K[]) Array.newInstance(keyClass, 0);

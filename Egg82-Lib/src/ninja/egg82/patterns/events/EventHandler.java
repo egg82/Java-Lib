@@ -1,6 +1,6 @@
 package ninja.egg82.patterns.events;
 
-import java.util.ArrayList;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -11,7 +11,7 @@ public class EventHandler<T extends EventArgs> {
 	//vars
 	private static final Logger logger = Logger.getLogger("ninja.egg82.patterns.events.EventHandler");
 	
-	private ArrayList<BiConsumer<Object, T>> listeners = new ArrayList<BiConsumer<Object, T>>();
+	private CopyOnWriteArrayList<BiConsumer<Object, T>> listeners = new CopyOnWriteArrayList<BiConsumer<Object, T>>();
 	
 	//constructor
 	public EventHandler() {
@@ -19,7 +19,7 @@ public class EventHandler<T extends EventArgs> {
 	}
 	
 	//public
-	public synchronized void attach(BiConsumer<Object, T> listener) {
+	public void attach(BiConsumer<Object, T> listener) {
 		if (listener == null) {
 			throw new ArgumentNullException("listener");
 		}
@@ -28,17 +28,17 @@ public class EventHandler<T extends EventArgs> {
 		}
 		listeners.add(listener);
 	}
-	public synchronized void detatch(BiConsumer<Object, T> listener) {
+	public void detatch(BiConsumer<Object, T> listener) {
 		if (listener == null) {
 			throw new ArgumentNullException("listener");
 		}
 		listeners.remove(listener);
 	}
-	public synchronized void detatchAll() {
+	public void detatchAll() {
 		listeners.clear();
 	}
 	
-	public synchronized void invoke(Object sender, T args) {
+	public void invoke(Object sender, T args) {
 		for (BiConsumer<Object, T> func : listeners) {
 			try {
 				func.accept(sender, args);
@@ -52,7 +52,7 @@ public class EventHandler<T extends EventArgs> {
 		}
 	}
 	
-	public synchronized int numListeners() {
+	public int numListeners() {
 		return listeners.size();
 	}
 	

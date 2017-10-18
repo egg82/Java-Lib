@@ -6,11 +6,13 @@ import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 
 import ninja.egg82.exceptionHandlers.builders.IBuilder;
+import ninja.egg82.patterns.DynamicObjectPool;
+import ninja.egg82.patterns.IObjectPool;
 
 public class NullExceptionHandler extends Handler implements IExceptionHandler {
 	//vars
-	private ArrayList<LogRecord> logs = new ArrayList<LogRecord>();
-	private ArrayList<Exception> exceptions = new ArrayList<Exception>();
+	private IObjectPool<LogRecord> logs = new DynamicObjectPool<LogRecord>();
+	private IObjectPool<Exception> exceptions = new DynamicObjectPool<Exception>();
 	
 	//constructor
 	public NullExceptionHandler() {
@@ -50,14 +52,14 @@ public class NullExceptionHandler extends Handler implements IExceptionHandler {
 	}
 	
 	public List<Exception> getUnsentExceptions() {
-		return exceptions;
+		return new ArrayList<Exception>(exceptions);
 	}
 	public void setUnsentExceptions(List<Exception> list) {
 		exceptions.clear();
 		exceptions.addAll(list);
 	}
 	public List<LogRecord> getUnsentLogs() {
-		return logs;
+		return new ArrayList<LogRecord>(logs);
 	}
 	public void setUnsentLogs(List<LogRecord> list) {
 		logs.clear();

@@ -6,7 +6,7 @@ import ninja.egg82.utils.ReflectUtil;
 
 public class Unit<T> {
 	//vars
-	private T type = null;
+	private volatile T type = null;
 	
 	//constructor
 	public Unit(T type) {
@@ -32,8 +32,8 @@ public class Unit<T> {
 			return false;
 		}
 		
-		Unit<?> u = (Unit<?>) obj;
-		if (((u.getType() == null && type == null) || u.getType().equals(type))) {
+		final Object t = ((Unit<?>) obj).type;
+		if (((t == null && type == null) || (t != null && t.equals(type)))) {
 			return true;
 		}
 		

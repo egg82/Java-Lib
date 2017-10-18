@@ -1,13 +1,13 @@
 package ninja.egg82.patterns.states;
 
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import ninja.egg82.exceptions.ArgumentNullException;
 
 public final class FiniteStateMachine {
 	//vars
 	private FiniteState currentState = null;
-	private HashMap<Class<FiniteState>, FiniteState> states = new HashMap<Class<FiniteState>, FiniteState>();
+	private ConcurrentHashMap<Class<FiniteState>, FiniteState> states = new ConcurrentHashMap<Class<FiniteState>, FiniteState>();
 	
 	//constructor
 	public FiniteStateMachine() {

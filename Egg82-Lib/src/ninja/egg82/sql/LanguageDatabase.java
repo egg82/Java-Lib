@@ -46,7 +46,7 @@ public class LanguageDatabase {
 	 * @param columns Any columns to give the row. The number of columns does not have to match any previous rows given
 	 * @return The row ID/index of the newly-added columns
 	 */
-	public int addRow(String... columns) {
+	public synchronized int addRow(String... columns) {
 		if (columns == null) {
 			throw new ArgumentNullException("columns");
 		}
@@ -116,7 +116,7 @@ public class LanguageDatabase {
 	 * 
 	 * @param rowIndex The row ID to retrieve
 	 */
-	public void removeRow(int rowIndex) {
+	public synchronized void removeRow(int rowIndex) {
 		if (rowIndex < 0 || rowIndex >= rows.size()) {
 			return;
 		}
@@ -139,7 +139,7 @@ public class LanguageDatabase {
 	 * 
 	 * @return The number of rows currently in the database
 	 */
-	public int numRows() {
+	public synchronized int numRows() {
 		return rows.size();
 	}
 	/**
@@ -148,7 +148,7 @@ public class LanguageDatabase {
 	 * @param rowIndex The row ID
 	 * @return The number of columns in the specified row ID
 	 */
-	public int numColumns(int rowIndex) {
+	public synchronized int numColumns(int rowIndex) {
 		if (rowIndex < 0 || rowIndex >= rows.size()) {
 			return -1;
 		}
@@ -162,7 +162,7 @@ public class LanguageDatabase {
 	 * @param caseSensitive Whether or not the search is case-sensitive
 	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
-	public int[] exact(String search, boolean caseSensitive) {
+	public synchronized int[] exact(String search, boolean caseSensitive) {
 		return exact(new String[] {search}, caseSensitive);
 	}
 	/**
@@ -173,7 +173,7 @@ public class LanguageDatabase {
 	 * @param delimiter An optional delimiter to split the string into several searches
 	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
-	public int[] exact(String search, boolean caseSensitive, char delimiter) {
+	public synchronized int[] exact(String search, boolean caseSensitive, char delimiter) {
 		return exact(search.split("\\" + delimiter), caseSensitive);
 	}
 	/**
@@ -183,7 +183,7 @@ public class LanguageDatabase {
 	 * @param caseSensitive Whether or not the search is case-sensitive
 	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
-	public int[] exact(String[] search, boolean caseSensitive) {
+	public synchronized int[] exact(String[] search, boolean caseSensitive) {
 		ArrayList<Integer> ids = new ArrayList<Integer>();
 		ArrayList<Pair<String, Integer>> keyColumn = new ArrayList<Pair<String, Integer>>();
 		ArrayList<Pair<String, Double>> keyScore = new ArrayList<Pair<String, Double>>();
@@ -358,7 +358,7 @@ public class LanguageDatabase {
 	 * @param caseSensitive Whether or not the search is case-sensitive
 	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
-	public int[] substring(String search, boolean caseSensitive) {
+	public synchronized int[] substring(String search, boolean caseSensitive) {
 		return substring(new String[] {search}, caseSensitive);
 	}
 	/**
@@ -369,7 +369,7 @@ public class LanguageDatabase {
 	 * @param delimiter An optional delimiter to split the string into several searches
 	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
-	public int[] substring(String search, boolean caseSensitive, char delimiter) {
+	public synchronized int[] substring(String search, boolean caseSensitive, char delimiter) {
 		return substring(search.split("\\" + delimiter), caseSensitive);
 	}
 	/**
@@ -379,7 +379,7 @@ public class LanguageDatabase {
 	 * @param caseSensitive Whether or not the search is case-sensitive
 	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
-	public int[] substring(String[] search, boolean caseSensitive) {
+	public synchronized int[] substring(String[] search, boolean caseSensitive) {
 		ArrayList<Integer> ids = new ArrayList<Integer>();
 		ArrayList<Pair<String, Integer>> keyLevenshtein = new ArrayList<Pair<String, Integer>>();
 		ArrayList<Pair<String, Double>> keyScore = new ArrayList<Pair<String, Double>>();
@@ -532,7 +532,7 @@ public class LanguageDatabase {
 	 * @param caseSensitive Whether or not the search is case-sensitive
 	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
-	public int[] levenshtein(String search, boolean caseSensitive) {
+	public synchronized int[] levenshtein(String search, boolean caseSensitive) {
 		return levenshtein(new String[] {search}, caseSensitive);
 	}
 	/**
@@ -543,7 +543,7 @@ public class LanguageDatabase {
 	 * @param delimiter An optional delimiter to split the string into several searches
 	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
-	public int[] levenshtein(String search, boolean caseSensitive, char delimiter) {
+	public synchronized int[] levenshtein(String search, boolean caseSensitive, char delimiter) {
 		return levenshtein(search.split("\\" + delimiter), caseSensitive);
 	}
 	/**
@@ -553,7 +553,7 @@ public class LanguageDatabase {
 	 * @param caseSensitive Whether or not the search is case-sensitive
 	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
-	public int[] levenshtein(String[] search, boolean caseSensitive) {
+	public synchronized int[] levenshtein(String[] search, boolean caseSensitive) {
 		ArrayList<Integer> ids = new ArrayList<Integer>();
 		ArrayList<Pair<String, Integer>> keyLevenshtein = new ArrayList<Pair<String, Integer>>();
 		ArrayList<Pair<String, Double>> keyScore = new ArrayList<Pair<String, Double>>();
@@ -705,7 +705,7 @@ public class LanguageDatabase {
 	 * @param search The search query
 	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
-	public int[] doubleMetaphone(String search) {
+	public synchronized int[] doubleMetaphone(String search) {
 		return doubleMetaphone(new String[] {search});
 	}
 	/**
@@ -715,7 +715,7 @@ public class LanguageDatabase {
 	 * @param delimiter An optional delimiter to split the string into several searches
 	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
-	public int[] doubleMetaphone(String search, char delimiter) {
+	public synchronized int[] doubleMetaphone(String search, char delimiter) {
 		return doubleMetaphone(search.split("\\" + delimiter));
 	}
 	/**
@@ -724,7 +724,7 @@ public class LanguageDatabase {
 	 * @param search The search query
 	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
-	public int[] doubleMetaphone(String[] search) {
+	public synchronized int[] doubleMetaphone(String[] search) {
 		ArrayList<Integer> ids = new ArrayList<Integer>();
 		ArrayList<Pair<String, Integer>> keyLevenshtein = new ArrayList<Pair<String, Integer>>();
 		ArrayList<Pair<String, Double>> keyScore = new ArrayList<Pair<String, Double>>();
@@ -815,7 +815,7 @@ public class LanguageDatabase {
 	 * @param caseSensitive Whether or not the search is case-sensitive
 	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
-	public int[] naturalLanguage(String search, boolean caseSensitive) {
+	public synchronized int[] naturalLanguage(String search, boolean caseSensitive) {
 		return naturalLanguage(new String[] {search}, caseSensitive);
 	}
 	/**
@@ -826,7 +826,7 @@ public class LanguageDatabase {
 	 * @param delimiter An optional delimiter to split the string into several searches
 	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
-	public int[] naturalLanguage(String search, boolean caseSensitive, char delimiter) {
+	public synchronized int[] naturalLanguage(String search, boolean caseSensitive, char delimiter) {
 		return naturalLanguage(search.split("\\" + delimiter), caseSensitive);
 	}
 	/**
@@ -836,7 +836,7 @@ public class LanguageDatabase {
 	 * @param caseSensitive Whether or not the search is case-sensitive
 	 * @return A list of row IDs that contain the specified query, ordered by relevance score descending and then ID ascending
 	 */
-	public int[] naturalLanguage(String[] search, boolean caseSensitive) {
+	public synchronized int[] naturalLanguage(String[] search, boolean caseSensitive) {
 		ArrayList<Integer> ids = new ArrayList<Integer>();
 		
 		int[] exactMatches = exact(search, caseSensitive);
@@ -875,7 +875,7 @@ public class LanguageDatabase {
 	 * @param columnIndex The index of the column to retrieve
 	 * @return The value of the cell retrieved by row and column ID
 	 */
-	public String getValue(int rowIndex, int columnIndex) {
+	public synchronized String getValue(int rowIndex, int columnIndex) {
 		if (columnIndex < 0 || rowIndex < 0 || rowIndex >= rows.size()) {
 			return null;
 		}
@@ -893,7 +893,7 @@ public class LanguageDatabase {
 	 * @param columnIndex The index of the column to retrieve
 	 * @return The values of the cells retrieved by row IDs and column ID
 	 */
-	public String[] getValues(int[] rowIndices, int columnIndex) {
+	public synchronized String[] getValues(int[] rowIndices, int columnIndex) {
 		if (rowIndices == null) {
 			return null;
 		}

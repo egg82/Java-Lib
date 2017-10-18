@@ -6,9 +6,9 @@ import ninja.egg82.utils.ReflectUtil;
 
 public class Triplet<L, C, R> {
 	//vars
-	private L left = null;
-	private C center = null;
-	private R right = null;
+	private volatile L left = null;
+	private volatile C center = null;
+	private volatile R right = null;
 	
 	//constructor
 	public Triplet(L left, C center, R right) {
@@ -49,10 +49,13 @@ public class Triplet<L, C, R> {
 		}
 		
 		Triplet<?, ?, ?> t = (Triplet<?, ?, ?>) obj;
+		final Object l = t.left;
+		final Object c = t.center;
+		final Object r = t.right;
 		if (
-			((t.getLeft() == null && left == null) || t.getLeft().equals(left))
-			&& ((t.getCenter() == null && center == null) || t.getCenter().equals(center))
-			&& ((t.getRight() == null && right == null) || t.getRight().equals(right))
+			((l == null && left == null) || (l != null && l.equals(left)))
+			&& ((c == null && center == null) || (c != null && c.equals(center)))
+			&& ((r == null && right == null) || (r != null && r.equals(right)))
 		) {
 			return true;
 		}

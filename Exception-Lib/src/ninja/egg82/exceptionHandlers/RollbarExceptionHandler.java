@@ -17,6 +17,8 @@ import com.rollbar.payload.data.Person;
 import ninja.egg82.core.LoggingRollbarResponseHandler;
 import ninja.egg82.exceptionHandlers.builders.IBuilder;
 import ninja.egg82.exceptions.ArgumentNullException;
+import ninja.egg82.patterns.DynamicObjectPool;
+import ninja.egg82.patterns.IObjectPool;
 import ninja.egg82.patterns.tuples.Pair;
 
 public class RollbarExceptionHandler extends Handler implements IExceptionHandler {
@@ -26,7 +28,7 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	
 	private Timer resendTimer = null;
 	private Timer cleanupTimer = null;
-	private ArrayList<Thread> errorThreads = new ArrayList<Thread>();
+	private IObjectPool<Thread> errorThreads = new DynamicObjectPool<Thread>();
 	
 	//constructor
 	public RollbarExceptionHandler() {

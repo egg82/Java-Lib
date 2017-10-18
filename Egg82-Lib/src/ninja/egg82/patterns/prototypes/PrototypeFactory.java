@@ -1,12 +1,12 @@
 package ninja.egg82.patterns.prototypes;
 
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import ninja.egg82.exceptions.ArgumentNullException;
 
 public final class PrototypeFactory implements IPrototypeFactory {
 	//vars
-	private HashMap<String, IPrototype> masterInstances = new HashMap<String, IPrototype>();
+	private ConcurrentHashMap<String, IPrototype> masterInstances = new ConcurrentHashMap<String, IPrototype>();
 	
 	//constructor
 	public PrototypeFactory() {
@@ -14,7 +14,7 @@ public final class PrototypeFactory implements IPrototypeFactory {
 	}
 	
 	//public
-	public synchronized void addPrototype(String name, IPrototype prototype) {
+	public void addPrototype(String name, IPrototype prototype) {
 		if (name == null) {
 			throw new ArgumentNullException("name");
 		}
@@ -22,21 +22,21 @@ public final class PrototypeFactory implements IPrototypeFactory {
 			throw new ArgumentNullException("prototype");
 		}
 		
-		masterInstances.put(name, prototype);
+		masterInstances.putIfAbsent(name, prototype);
 	}
-	public synchronized void removePrototype(String name) {
+	public void removePrototype(String name) {
 		if (name == null) {
 			throw new IllegalArgumentException("name cannot be null");
 		}
 		masterInstances.remove(name);
 	}
-	public synchronized boolean hasPrototype(String name) {
+	public boolean hasPrototype(String name) {
 		if (name == null) {
 			throw new ArgumentNullException("name");
 		}
 		return masterInstances.containsKey(name);
 	}
-	public synchronized IPrototype createInstance(String name) {
+	public IPrototype createInstance(String name) {
 		if (name == null) {
 			throw new ArgumentNullException("name");
 		}
@@ -48,7 +48,7 @@ public final class PrototypeFactory implements IPrototypeFactory {
 		}
 		return null;
 	}
-	public synchronized IPrototype[] createInstances(String name, int numInstances) {
+	public IPrototype[] createInstances(String name, int numInstances) {
 		if (name == null) {
 			throw new ArgumentNullException("name");
 		}

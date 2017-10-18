@@ -1,8 +1,8 @@
 package ninja.egg82.patterns;
 
 import java.lang.reflect.Array;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 import net.jodah.expiringmap.ExpirationPolicy;
@@ -11,15 +11,16 @@ import ninja.egg82.events.ExpireEventArgs;
 import ninja.egg82.exceptions.ArgumentNullException;
 import ninja.egg82.patterns.events.EventHandler;
 import ninja.egg82.patterns.tuples.Pair;
+import ninja.egg82.patterns.tuples.Unit;
 import ninja.egg82.utils.ReflectUtil;
 
 public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 	//vars
 	private Class<K> keyClass = null;
 	private K[] keyCache = null;
-	private boolean keysDirty = false;
-	private Map<K, Pair<Class<?>, Object>> registry = null;
-	private HashMap<Object, K> reverseRegistry = new HashMap<Object, K>();
+	private volatile boolean keysDirty = false;
+	private ConcurrentMap<K, Pair<Class<?>, Unit<Object>>> registry = null;
+	private ConcurrentHashMap<Unit<Object>, K> reverseRegistry = new ConcurrentHashMap<Unit<Object>, K>();
 	
 	private final EventHandler<ExpireEventArgs<K>> expire = new EventHandler<ExpireEventArgs<K>>();
 	
@@ -35,7 +36,7 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 		registry = ExpiringMap.builder()
 			.expiration(registerExpirationTimeMilliseconds, TimeUnit.MILLISECONDS)
 			.expirationPolicy(ExpirationPolicy.valueOf(expirationPolicy.name()))
-			.expirationListener((k, v) -> onRegisterExpiration((K) k, (Pair<Class<?>, Object>) v))
+			.expirationListener((k, v) -> onRegisterExpiration((K) k, (Pair<Class<?>, Unit<Object>>) v))
 			.build();
 	}
 	
@@ -44,13 +45,14 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 		return expire;
 	}
 	
-	public final synchronized void setRegister(K key, Object data) {
+	public final void setRegister(K key, Object data) {
 		if (key == null) {
 			throw new ArgumentNullException("key");
 		}
 		
-		Pair<Class<?>, Object> pair = registry.get(key);
-		registry.put(key, new Pair<Class<?>, Object>((data != null) ? data.getClass() : null, data));
+		Pair<Class<?>, Unit<Object>> pair = registry.get(key);
+		Unit<Object> unit = new Unit<Object>(data);
+		registry.put(key, new Pair<Class<?>, Unit<Object>>((data != null) ? data.getClass() : null, unit));
 		
 		if (pair == null) {
 			// Key didn't exist before. Added.
@@ -60,65 +62,65 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 			reverseRegistry.remove(pair.getRight());
 		}
 		
-		reverseRegistry.put(data, key);
+		reverseRegistry.put(unit, key);
 	}
-	public final synchronized Object removeRegister(K key) {
+	public final Object removeRegister(K key) {
 		if (key == null) {
 			throw new ArgumentNullException("key");
 		}
 		
-		Pair<Class<?>, Object> pair = registry.get(key);
+		Pair<Class<?>, Unit<Object>> pair = registry.get(key);
 		if (pair != null) {
 			registry.remove(key);
 			reverseRegistry.remove(pair.getRight());
 			keysDirty = true;
-			return pair.getRight();
+			return pair.getRight().getType();
 		}
 		return null;
 	}
 	@SuppressWarnings("unchecked")
-	public final synchronized <T> T removeRegister(K key, Class<T> type) {
+	public final <T> T removeRegister(K key, Class<T> type) {
 		if (key == null) {
 			throw new ArgumentNullException("key");
 		}
 		
-		Pair<Class<?>, Object> pair = registry.get(key);
+		Pair<Class<?>, Unit<Object>> pair = registry.get(key);
 		if (pair != null) {
 			registry.remove(key);
 			reverseRegistry.remove(pair.getRight());
 			keysDirty = true;
 			
-			if (pair.getRight() == null) {
+			if (pair.getRight().getType() == null) {
 				return null;
 			}
 			
 			if (!ReflectUtil.doesExtend(type, pair.getLeft())) {
 				try {
-					return type.cast(pair.getRight());
+					return type.cast(pair.getRight().getType());
 				} catch (Exception ex) {
 					throw new RuntimeException("data type cannot be converted to the type specified.", ex);
 				}
 			} else {
-				return (T) pair.getRight();
+				return (T) pair.getRight().getType();
 			}
 		}
 		return null;
 	}
 	
-	public final synchronized Object getRegister(K key) {
+	public final Object getRegister(K key) {
 		if (key == null) {
 			throw new ArgumentNullException("key");
 		}
 		
-		Pair<Class<?>, Object> result = registry.get(key);
+		Pair<Class<?>, Unit<Object>> result = registry.get(key);
 		
 		if (result != null) {
-			return result.getRight();
+			return result.getRight().getType();
 		}
 		return null;
 	}
 	@SuppressWarnings("unchecked")
-	public final synchronized <T> T getRegister(K key, Class<T> type) {
+	public final <T> T getRegister(K key, Class<T> type) {
 		if (key == null) {
 			throw new ArgumentNullException("key");
 		}
@@ -126,10 +128,10 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 			throw new ArgumentNullException("type");
 		}
 		
-		Pair<Class<?>, Object> result = registry.get(key);
+		Pair<Class<?>, Unit<Object>> result = registry.get(key);
 		
 		if (result != null) {
-			Object data = result.getRight();
+			Object data = result.getRight().getType();
 			if (data == null) {
 				return null;
 			}
@@ -145,15 +147,15 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 		}
 		return null;
 	}
-	public final synchronized K getKey(Object data) {
-		return reverseRegistry.get(data);
+	public final K getKey(Object data) {
+		return reverseRegistry.get(new Unit<Object>(data));
 	}
-	public final synchronized Class<?> getRegisterClass(K key) {
+	public final Class<?> getRegisterClass(K key) {
 		if (key == null) {
 			throw new ArgumentNullException("key");
 		}
 		
-		Pair<Class<?>, Object> result = registry.get(key);
+		Pair<Class<?>, Unit<Object>> result = registry.get(key);
 		
 		if (result != null) {
 			return result.getLeft();
@@ -161,22 +163,22 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 		return null;
 	}
 	
-	public final synchronized Class<K> getKeyClass() {
+	public final Class<K> getKeyClass() {
 		return keyClass;
 	}
 	
-	public final synchronized boolean hasRegister(K key) {
+	public final boolean hasRegister(K key) {
 		if (key == null) {
 			return false;
 		}
 		return registry.containsKey(key);
 	}
-	public final synchronized boolean hasValue(Object data) {
-		return reverseRegistry.containsKey(data);
+	public final boolean hasValue(Object data) {
+		return reverseRegistry.containsKey(new Unit<Object>(data));
 	}
 	
 	@SuppressWarnings("unchecked")
-	public final synchronized void clear() {
+	public final void clear() {
 		registry.clear();
 		reverseRegistry.clear();
 		keyCache = (K[]) Array.newInstance(keyClass, 0);
@@ -193,9 +195,9 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 	}
 	
 	//private
-	private final synchronized void onRegisterExpiration(K key, Pair<Class<?>, Object> value) {
+	private final void onRegisterExpiration(K key, Pair<Class<?>, Unit<Object>> value) {
 		reverseRegistry.remove(value.getRight());
 		keysDirty = true;
-		expire.invoke(this, new ExpireEventArgs<K>(key, value.getLeft(), value.getRight()));
+		expire.invoke(this, new ExpireEventArgs<K>(key, value.getLeft(), value.getRight().getType()));
 	}
 }

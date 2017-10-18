@@ -4,13 +4,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.charset.Charset;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map.Entry;
 
 import ninja.egg82.exceptions.ArgumentNullException;
 
-import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class FileUtil {
     //vars
@@ -21,8 +19,8 @@ public final class FileUtil {
 	public static final char DIRECTORY_SEPARATOR_CHAR = File.separatorChar;
 	public static final String LINE_SEPARATOR = System.lineSeparator();
 	
-	private static HashMap<String, FileInputStream> inStreams = new HashMap<String, FileInputStream>();
-	private static HashMap<String, FileOutputStream> outStreams = new HashMap<String, FileOutputStream>();
+	private static ConcurrentHashMap<String, FileInputStream> inStreams = new ConcurrentHashMap<String, FileInputStream>();
+	private static ConcurrentHashMap<String, FileOutputStream> outStreams = new ConcurrentHashMap<String, FileOutputStream>();
     
     //constructor
     public FileUtil() {
@@ -143,7 +141,7 @@ public final class FileUtil {
     	}
     }
     
-    public synchronized static void open(String path) throws Exception {
+    public static void open(String path) throws Exception {
     	if (path == null) {
     		throw new ArgumentNullException("path");
     	}
@@ -158,12 +156,12 @@ public final class FileUtil {
     		return;
     	}
     	
-    	inStreams.put(path, new FileInputStream(path));
+    	inStreams.putIfAbsent(path, new FileInputStream(path));
     	byte[] old = read(path, 0);
-    	outStreams.put(path, new FileOutputStream(path, false));
+    	outStreams.putIfAbsent(path, new FileOutputStream(path, false));
     	write(path, old, 0);
     }
-    public synchronized static void close(String path) throws Exception {
+    public static void close(String path) throws Exception {
     	if (path == null) {
     		throw new ArgumentNullException("path");
     	}
@@ -171,45 +169,43 @@ public final class FileUtil {
     		return;
     	}
     	
-    	inStreams.get(path).close();
-    	inStreams.remove(path);
-    	outStreams.get(path).close();
-    	outStreams.remove(path);
-    }
-    public synchronized static void closeAll() throws Exception {
-    	Set<Entry<String, FileInputStream>> inEntries = inStreams.entrySet();
-    	Iterator<Entry<String, FileInputStream>> inI = inEntries.iterator();
-    	
-    	while (inI.hasNext()) {
-    		Entry<String, FileInputStream> entry = inI.next();
-    		entry.getValue().close();
+    	FileInputStream inStream = inStreams.get(path);
+    	if (inStream != null) {
+    		inStream.close();
+    		inStreams.remove(path);
     	}
-    	
+    	FileOutputStream outStream = outStreams.get(path);
+    	if (outStream != null) {
+	    	outStream.close();
+	    	outStreams.remove(path);
+    	}
+    }
+    public static void closeAll() throws Exception {
+    	for (Entry<String, FileInputStream> kvp : inStreams.entrySet()) {
+    		kvp.getValue().close();
+    	}
     	inStreams.clear();
     	
-    	Set<Entry<String, FileOutputStream>> outEntries = outStreams.entrySet();
-    	Iterator<Entry<String, FileOutputStream>> outI = outEntries.iterator();
-    	
-    	while (outI.hasNext()) {
-    		Entry<String, FileOutputStream> entry = outI.next();
-    		entry.getValue().close();
+    	for (Entry<String, FileOutputStream> kvp : outStreams.entrySet()) {
+    		kvp.getValue().close();
     	}
-    	
     	outStreams.clear();
     }
     
-    public synchronized static boolean isOpen(String path) {
+    public static boolean isOpen(String path) {
     	return (path != null && inStreams.containsKey(path)) ? true : false;
     }
     
-    public synchronized static byte[] read(String path, long position) throws Exception {
+    public static byte[] read(String path, long position) throws Exception {
     	return read(path, position, -1L);
     }
-    public synchronized static byte[] read(String path, long position, long length) throws Exception {
+    public static byte[] read(String path, long position, long length) throws Exception {
     	if (path == null) {
     		throw new ArgumentNullException("path");
     	}
-    	if (!inStreams.containsKey(path)) {
+    	
+    	FileInputStream stream = inStreams.get(path);
+    	if (stream == null) {
     		throw new RuntimeException("File is not open.");
     	}
     	
@@ -223,21 +219,21 @@ public final class FileUtil {
     	
     	byte[] buffer =  new byte[(int) Math.min(Integer.MAX_VALUE, length)];
     	
-    	FileInputStream stream = inStreams.get(path);
     	stream.getChannel().position(position);
     	stream.read(buffer, 0, (int) length);
     	
     	return buffer;
     }
-    public synchronized static void write(String path, byte[] bytes, long position) throws Exception {
+    public static void write(String path, byte[] bytes, long position) throws Exception {
     	if (bytes == null || bytes.length == 0) {
     		return;
     	}
-    	
     	if (path == null) {
     		throw new ArgumentNullException("path");
     	}
-    	if (!outStreams.containsKey(path)) {
+    	
+    	FileOutputStream stream = outStreams.get(path);
+    	if (stream == null) {
     		throw new RuntimeException("File is not open.");
     	}
     	
@@ -245,19 +241,18 @@ public final class FileUtil {
     		position = 0L;
     	}
     	
-    	FileOutputStream stream = outStreams.get(path);
     	stream.getChannel().position(position);
     	stream.write(bytes);
     	stream.flush();
     }
     
-    public synchronized static void erase(String path) throws Exception {
+    public static void erase(String path) throws Exception {
     	if (path == null) {
     		throw new ArgumentNullException("path");
     	}
     	
-    	if (outStreams.containsKey(path)) {
-    		FileOutputStream stream = outStreams.get(path);
+    	FileOutputStream stream = outStreams.get(path);
+    	if (stream != null) {
         	stream.write(new byte[0]);
         	stream.flush();
     	} else {

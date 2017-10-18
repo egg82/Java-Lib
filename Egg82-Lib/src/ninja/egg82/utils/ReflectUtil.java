@@ -4,7 +4,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -131,7 +130,7 @@ public final class ReflectUtil {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static <T> List<Class<? extends T>> getClasses(Class<T> clazz, String pkg) {
+	public static <T> List<Class<T>> getClasses(Class<T> clazz, String pkg, boolean recursive, boolean keepInterfaces, boolean keepAbstracts, String... excludePackages) {
 		if (clazz == null) {
 			throw new ArgumentNullException("clazz");
 		}
@@ -139,20 +138,102 @@ public final class ReflectUtil {
 			throw new ArgumentNullException("pkg");
 		}
 		
-		Reflections.log = null;
-		
-		if (pkg.lastIndexOf('.') != pkg.length() - 1) {
-			pkg = pkg + ".";
+		String excludeString = null;
+		if (excludePackages != null && excludePackages.length > 0) {
+			for (int i = 0; i < excludePackages.length; i++) {
+				excludePackages[i] = "-" + excludePackages[i];
+			}
+			excludeString = String.join(", ", excludePackages);
 		}
 		
 		Reflections ref = null;
 		try {
-			ref = new Reflections(new ConfigurationBuilder()
-					.setScanners(new SubTypesScanner(false),
-							new ResourcesScanner(),
-							new TypeElementsScanner())
-					.setUrls(ClasspathHelper.forPackage(pkg))
-					.filterInputsBy(new FilterBuilder().include(FilterBuilder.prefix(pkg))));
+			ConfigurationBuilder config = new ConfigurationBuilder()
+				.setScanners(new SubTypesScanner(false),
+						new ResourcesScanner(),
+						new TypeElementsScanner())
+				.setUrls(ClasspathHelper.forPackage(pkg));
+			
+			if (excludeString != null) {
+				config = config.filterInputsBy(FilterBuilder.parsePackages(excludeString).include(FilterBuilder.prefix(pkg)));
+			} else {
+				config = config.filterInputsBy(new FilterBuilder().include(FilterBuilder.prefix(pkg)));
+			}
+			
+			ref = new Reflections(config);
+		} catch (Exception ex) {
+			return new ArrayList<Class<T>>();
+		}
+		
+		Set<String> typeSet = ref.getStore().get("TypeElementsScanner").keySet();
+		Set<Class<?>> set = Sets.newHashSet(ReflectionUtils.forNames(typeSet, ref.getConfiguration().getClassLoaders()));
+		ArrayList<Class<T>> list = new ArrayList<Class<T>>();
+		
+		for (Class<?> next : set) {
+			if (!keepInterfaces && next.isInterface()) {
+				continue;
+			}
+			if (!keepAbstracts && Modifier.isAbstract(next.getModifiers())) {
+				continue;
+			}
+			
+			String n = next.getName();
+			n = n.substring(n.indexOf('.') + 1);
+			
+			if (n.contains("$")) {
+				continue;
+			}
+			
+			if (!recursive) {
+				String p = next.getName();
+				p = p.substring(0, p.lastIndexOf('.'));
+				
+				if (!p.equalsIgnoreCase(pkg)) {
+					continue;
+				}
+			}
+			
+			if (!ReflectUtil.doesExtend(clazz, next)) {
+				continue;
+			}
+			
+			list.add((Class<T>) next);
+		}
+		
+		return list;
+	}
+	@SuppressWarnings("unchecked")
+	public static <T> List<Class<? extends T>> getClassesParameterized(Class<T> clazz, String pkg, boolean recursive, boolean keepInterfaces, boolean keepAbstracts, String... excludePackages) {
+		if (clazz == null) {
+			throw new ArgumentNullException("clazz");
+		}
+		if (pkg == null) {
+			throw new ArgumentNullException("pkg");
+		}
+		
+		String excludeString = null;
+		if (excludePackages != null && excludePackages.length > 0) {
+			for (int i = 0; i < excludePackages.length; i++) {
+				excludePackages[i] = "-" + excludePackages[i];
+			}
+			excludeString = String.join(", ", excludePackages);
+		}
+		
+		Reflections ref = null;
+		try {
+			ConfigurationBuilder config = new ConfigurationBuilder()
+				.setScanners(new SubTypesScanner(false),
+						new ResourcesScanner(),
+						new TypeElementsScanner())
+				.setUrls(ClasspathHelper.forPackage(pkg));
+			
+			if (excludeString != null) {
+				config = config.filterInputsBy(FilterBuilder.parsePackages(excludeString).include(FilterBuilder.prefix(pkg)));
+			} else {
+				config = config.filterInputsBy(new FilterBuilder().include(FilterBuilder.prefix(pkg)));
+			}
+			
+			ref = new Reflections(config);
 		} catch (Exception ex) {
 			return new ArrayList<Class<? extends T>>();
 		}
@@ -161,13 +242,35 @@ public final class ReflectUtil {
 		Set<Class<?>> set = Sets.newHashSet(ReflectionUtils.forNames(typeSet, ref.getConfiguration().getClassLoaders()));
 		ArrayList<Class<? extends T>> list = new ArrayList<Class<? extends T>>();
 		
-		Iterator<Class<?>> i = set.iterator();
-		while (i.hasNext()) {
-			Class<T> next = (Class<T>) i.next();
-			if (next.getName().contains("$")) {
+		for (Class<?> next : set) {
+			if (!keepInterfaces && next.isInterface()) {
 				continue;
 			}
-			list.add(next);
+			if (!keepAbstracts && Modifier.isAbstract(next.getModifiers())) {
+				continue;
+			}
+			
+			String n = next.getName();
+			n = n.substring(n.indexOf('.') + 1);
+			
+			if (n.contains("$")) {
+				continue;
+			}
+			
+			if (!recursive) {
+				String p = next.getName();
+				p = p.substring(0, p.lastIndexOf('.'));
+				
+				if (!p.equalsIgnoreCase(pkg)) {
+					continue;
+				}
+			}
+			
+			if (!ReflectUtil.doesExtend(clazz, next)) {
+				continue;
+			}
+			
+			list.add((Class<? extends T>) next);
 		}
 		
 		return list;

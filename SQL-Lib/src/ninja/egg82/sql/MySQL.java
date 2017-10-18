@@ -7,7 +7,6 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.UUID;
 
@@ -18,6 +17,8 @@ import org.apache.commons.lang.NotImplementedException;
 import ninja.egg82.core.SQLData;
 import ninja.egg82.core.SQLError;
 import ninja.egg82.events.SQLEventArgs;
+import ninja.egg82.patterns.DynamicObjectPool;
+import ninja.egg82.patterns.IObjectPool;
 import ninja.egg82.patterns.events.EventArgs;
 import ninja.egg82.patterns.events.EventHandler;
 import ninja.egg82.patterns.tuples.Triplet;
@@ -32,7 +33,7 @@ public class MySQL implements ISQL {
 	private Connection conn = null;
 	private PreparedStatement command = null;
 	
-	private ArrayDeque<Triplet<String, Object[], UUID>> backlog = null;
+	private IObjectPool<Triplet<String, Object[], UUID>> backlog = null;
 	private boolean busy = false;
 	private boolean connected = false;
 	private Timer backlogTimer = null;
@@ -63,7 +64,7 @@ public class MySQL implements ISQL {
 		
 		connected =  false;
 		busy = true;
-		backlog = new ArrayDeque<Triplet<String, Object[], UUID>>();
+		backlog = new DynamicObjectPool<Triplet<String, Object[], UUID>>();
 		connected = true;
 		backlogTimer.start();
 		connect.invoke(this, EventArgs.EMPTY);
