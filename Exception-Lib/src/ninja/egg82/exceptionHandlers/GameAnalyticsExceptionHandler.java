@@ -68,15 +68,13 @@ public class GameAnalyticsExceptionHandler extends Handler implements IException
 	}
 	
 	public void addThread(Thread thread) {
-		if (api != null && !errorThreads.contains(thread)) {
-			errorThreads.add(thread);
+		if (api != null && !errorThreads.add(thread)) {
 			api.handleUncaughtErrors(thread);
 		}
 	}
 	public void removeThread(Thread thread) {
-		if (api != null && errorThreads.contains(thread)) {
+		if (api != null && errorThreads.remove(thread)) {
 			api.unhandleUncaughtErrors(thread);
-			errorThreads.remove(thread);
 		}
 	}
 	public void silentException(Exception ex) {
@@ -117,32 +115,30 @@ public class GameAnalyticsExceptionHandler extends Handler implements IException
 		return new ArrayList<Exception>(exceptions);
 	}
 	public void setUnsentExceptions(List<Exception> list) {
-		exceptions.clear();
-		exceptions.addAll(list);
-		
 		if (api != null) {
-			for (Exception ex : exceptions) {
+			for (Exception ex : list) {
 				api.log(ex);
 			}
+		} else {
 			exceptions.clear();
+			exceptions.addAll(list);
 		}
 }
 	public List<LogRecord> getUnsentLogs() {
 		return new ArrayList<LogRecord>(logs);
 	}
 	public void setUnsentLogs(List<LogRecord> list) {
-		logs.clear();
-		logs.addAll(list);
-		
 		if (api != null) {
-			for (LogRecord record : logs) {
+			for (LogRecord record : list) {
 				if (record.getThrown() != null) {
 					api.log(record.getThrown(), record.getLevel());
 				} else if (record.getMessage() != null) {
 					api.log(record.getMessage(), record.getLevel());
 				}
 			}
+		} else {
 			logs.clear();
+			logs.addAll(list);
 		}
 	}
 	

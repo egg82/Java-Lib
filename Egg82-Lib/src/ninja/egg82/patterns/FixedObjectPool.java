@@ -2,19 +2,19 @@ package ninja.egg82.patterns;
 
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 import ninja.egg82.exceptions.ArgumentNullException;
 
 public final class FixedObjectPool<T> implements IObjectPool<T> {
 	//vars
-	private ConcurrentLinkedQueue<T> pool = null;
+	private ConcurrentLinkedDeque<T> pool = null;
 	private int capacity = 0;
 	
 	//constructor
 	public FixedObjectPool(int capacity) {
 		this.capacity = capacity;
-		pool = new ConcurrentLinkedQueue<T>();
+		pool = new ConcurrentLinkedDeque<T>();
 	}
 	
 	//public
@@ -28,11 +28,17 @@ public final class FixedObjectPool<T> implements IObjectPool<T> {
 		return capacity;
 	}
 	
-	public T pop() {
-		return pool.poll();
+	public T popFirst() {
+		return pool.pollFirst();
 	}
-	public T peek() {
-		return pool.peek();
+	public T peekFirst() {
+		return pool.peekFirst();
+	}
+	public T popLast() {
+		return pool.pollLast();
+	}
+	public T peekLast() {
+		return pool.peekLast();
 	}
 	public boolean add(T e) {
 		if (e == null) {

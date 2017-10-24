@@ -15,6 +15,7 @@ import java.util.logging.Level;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import ninja.egg82.crypto.CryptoHelper;
 import ninja.egg82.crypto.ICryptoHelper;
 import ninja.egg82.exceptions.ArgumentNullException;
 import ninja.egg82.patterns.ServiceLocator;
@@ -47,6 +48,11 @@ public class GameAnalyticsAPI {
 		}
 		if (userId == null) {
 			throw new ArgumentNullException("userId");
+		}
+		
+		if (cryptoHelper == null) {
+			ServiceLocator.provideService(CryptoHelper.class, false);
+			cryptoHelper = ServiceLocator.getService(ICryptoHelper.class);
 		}
 		
 		this.gameKey = gameKey;
@@ -111,7 +117,7 @@ public class GameAnalyticsAPI {
 	
 	//private
 	private void sendError(String message, String level, int tries) {
-		if (tries > 100) {
+		if (tries > 12) {
 			return;
 		}
 		
@@ -124,6 +130,7 @@ public class GameAnalyticsAPI {
 						
 					}
 					sendError(message, level, tries + 1);
+					return;
 				}
 				
 				HttpURLConnection conn = null;
@@ -136,14 +143,15 @@ public class GameAnalyticsAPI {
 						
 					}
 					sendError(message, level, tries + 1);
+					return;
 				}
 				
 				byte[] postData = cryptoHelper.toBytes(getJsonString(message, level));
 				byte[] hmac = cryptoHelper.hmac256(postData, cryptoHelper.toBytes(secretKey));
 				
 				conn.setDoOutput(true);
-				//conn.setDoInput(true);
-				conn.setDoInput(false);
+				conn.setDoInput(true);
+				//conn.setDoInput(false);
 				conn.setRequestProperty("Accept", "application/json");
 				conn.setRequestProperty("Connection", "close");
 				//conn.setRequestProperty("Content-Encoding", "gzip");
@@ -164,9 +172,10 @@ public class GameAnalyticsAPI {
 						
 					}
 					sendError(message, level, tries + 1);
+					return;
 				}
 				
-				/*try {
+				try {
 					int code = conn.getResponseCode();
 					
 					InputStream in = (code == 200) ? conn.getInputStream() : conn.getErrorStream();
@@ -181,9 +190,9 @@ public class GameAnalyticsAPI {
 					reader.close();
 					in.close();
 					
-					if (code == 200) {
+					/*if (code == 200) {
 						JSONObject json = new JSONObject(builder.toString());
-					}
+					}*/
 				} catch (Exception ex) {
 					try {
 						Thread.sleep(10000L);
@@ -193,7 +202,7 @@ public class GameAnalyticsAPI {
 					
 					sendError(message, level, tries + 1);
 					return;
-				}*/
+				}
 			}
 		}).start();
 	}

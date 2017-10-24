@@ -7,6 +7,8 @@ public interface IObjectPool<T> extends Collection<T> {
 	int remainingCapacity();
 	int capacity();
 	
-	T pop();
-	T peek();
+	T popFirst();
+	T peekFirst();
+	T popLast();
+	T peekLast();
 }

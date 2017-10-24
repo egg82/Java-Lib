@@ -28,9 +28,23 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 	public ExpiringRegistry(Class<K> keyClass, long registerExpirationTimeMilliseconds) {
 		this(keyClass, registerExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy.CREATED);
 	}
+	public ExpiringRegistry(K[] keyArray, long registerExpirationTimeMilliseconds) {
+		this(keyArray, registerExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy.CREATED);
+	}
 	@SuppressWarnings("unchecked")
 	public ExpiringRegistry(Class<K> keyClass, long registerExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy expirationPolicy) {
 		this.keyClass = keyClass;
+		keyCache = (K[]) Array.newInstance(keyClass, 0);
+		
+		registry = ExpiringMap.builder()
+			.expiration(registerExpirationTimeMilliseconds, TimeUnit.MILLISECONDS)
+			.expirationPolicy(ExpirationPolicy.valueOf(expirationPolicy.name()))
+			.expirationListener((k, v) -> onRegisterExpiration((K) k, (Pair<Class<?>, Unit<Object>>) v))
+			.build();
+	}
+	@SuppressWarnings("unchecked")
+	public ExpiringRegistry(K[] keyArray, long registerExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy expirationPolicy) {
+		this.keyClass = (Class<K>) keyArray.getClass();
 		keyCache = (K[]) Array.newInstance(keyClass, 0);
 		
 		registry = ExpiringMap.builder()

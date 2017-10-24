@@ -253,7 +253,7 @@ public class MySQL implements ISQL {
 			return;
 		}
 		
-		Triplet<String, Object[], UUID> first = backlog.pop();
+		Triplet<String, Object[], UUID> first = backlog.popFirst();
 		queryInternal(first.getLeft(), first.getCenter(), first.getRight());
 	}
 	

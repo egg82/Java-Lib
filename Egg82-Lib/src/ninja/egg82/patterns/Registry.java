@@ -22,6 +22,11 @@ public class Registry<K> implements IRegistry<K> {
 		this.keyClass = keyClass;
 		keyCache = (K[]) Array.newInstance(keyClass, 0);
 	}
+	@SuppressWarnings("unchecked")
+	public Registry(K[] keyArray) {
+		this.keyClass = (Class<K>) keyArray.getClass();
+		keyCache = (K[]) Array.newInstance(keyClass, 0);
+	}
 	
 	//public
 	public final void setRegister(K key, Object data) {
