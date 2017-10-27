@@ -16,6 +16,7 @@ import org.apache.commons.lang.NotImplementedException;
 
 import ninja.egg82.core.SQLData;
 import ninja.egg82.core.SQLError;
+import ninja.egg82.enums.SQLType;
 import ninja.egg82.events.SQLEventArgs;
 import ninja.egg82.patterns.DynamicObjectPool;
 import ninja.egg82.patterns.IObjectPool;
@@ -35,8 +36,8 @@ public class SQLite implements ISQL {
 	private PreparedStatement command = null;
 	
 	private IObjectPool<Triplet<String, Object[], UUID>> backlog = null;
-	private boolean busy = false;
-	private boolean connected = false;
+	private volatile boolean busy = false;
+	private volatile boolean connected = false;
 	private Timer backlogTimer = null;
 	
 	//constructor
@@ -57,7 +58,7 @@ public class SQLite implements ISQL {
 			throw new IllegalArgumentException("filePath cannot be null or empty.");
 		}
 		
-		if (FileUtil.pathExists(filePath)) {
+		if (!FileUtil.pathExists(filePath)) {
 			try {
 				FileUtil.createFile(filePath);
 			} catch (Exception ex) {
@@ -157,22 +158,28 @@ public class SQLite implements ISQL {
 		return error;
 	}
 	
+	public SQLType getType() {
+		return SQLType.SQLite;
+	}
+	
 	//private
 	private void queryInternal(String q, Object[] parameters, UUID u) {
 		try {
 			command = conn.prepareStatement(q);
 		} catch (Exception ex) {
 			error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+			sendNextInternal();
 			return;
 		}
 		
 		if (parameters != null && parameters.length > 0) {
 			try {
 				for (int i = 0; i < parameters.length; i++) {
-					command.setObject(i, parameters[i]);
+					command.setObject(i + 1, parameters[i]);
 				}
 			} catch (Exception ex) {
 				error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+				sendNextInternal();
 				return;
 			}
 		}
@@ -181,6 +188,7 @@ public class SQLite implements ISQL {
 			command.execute();
 		} catch (Exception ex) {
 			error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+			sendNextInternal();
 			return;
 		}
 		
@@ -189,6 +197,7 @@ public class SQLite implements ISQL {
 			d.recordsAffected = command.getUpdateCount();
 		} catch (Exception ex) {
 			error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+			sendNextInternal();
 			return;
 		}
 		
@@ -197,6 +206,7 @@ public class SQLite implements ISQL {
 			results = command.getResultSet();
 		} catch (Exception ex) {
 			error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+			sendNextInternal();
 			return;
 		}
 		
@@ -206,35 +216,50 @@ public class SQLite implements ISQL {
 				metaData = results.getMetaData();
 			} catch (Exception ex) {
 				error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+				sendNextInternal();
 				return;
 			}
 			ArrayList<String> tColumns = new ArrayList<String>();
 			try {
-				for (int i = 0; i < metaData.getColumnCount(); i++) {
+				for (int i = 1; i <= metaData.getColumnCount(); i++) {
 					tColumns.add(metaData.getColumnName(i));
 				}
 			} catch (Exception ex) {
 				error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+				sendNextInternal();
 				return;
 			}
 			d.columns = tColumns.toArray(new String[0]);
 			
 			ArrayList<Object[]> tData = new ArrayList<Object[]>();
+			try {
+				while (results.next()) {
+					Object[] tVals = new Object[tColumns.size()];
+					for (int i = 0; i < tColumns.size(); i++) {
+						tVals[i] = results.getObject(i + 1);
+					}
+					tData.add(tVals);
+				}
+			} catch (Exception ex) {
+				error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+				sendNextInternal();
+				return;
+			}
 			
 			try {
-				do {
+				while(command.getMoreResults()) {
 					results = command.getResultSet();
-					results.beforeFirst();
 					while (results.next()) {
 						Object[] tVals = new Object[tColumns.size()];
 						for (int i = 0; i < tColumns.size(); i++) {
-							tVals[i] = results.getObject(i);
+							tVals[i] = results.getObject(i + 1);
 						}
 						tData.add(tVals);
 					}
-				} while (command.getMoreResults());
+				};
 			} catch (Exception ex) {
 				error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+				sendNextInternal();
 				return;
 			}
 			
@@ -246,11 +271,12 @@ public class SQLite implements ISQL {
 			}
 			
 			data.invoke(this, new SQLEventArgs(q, parameters, new SQLError(), d, u));
-			new Thread(new Runnable() {
-				public void run() {
-					sendNext();
-				}
-			}).start();
+			sendNextInternal();
+		} else {
+			d.columns = new String[0];
+			d.data = new Object[0][];
+			data.invoke(this, new SQLEventArgs(q, parameters, new SQLError(), d, u));
+			sendNextInternal();
 		}
 	}
 	
@@ -262,6 +288,13 @@ public class SQLite implements ISQL {
 		
 		Triplet<String, Object[], UUID> first = backlog.popFirst();
 		queryInternal(first.getLeft(), first.getCenter(), first.getRight());
+	}
+	private void sendNextInternal() {
+		new Thread(new Runnable() {
+			public void run() {
+				sendNext();
+			}
+		}).start();
 	}
 	
 	private ActionListener onBacklogTimer = new ActionListener() {

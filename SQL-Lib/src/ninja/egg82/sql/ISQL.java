@@ -2,6 +2,7 @@ package ninja.egg82.sql;
 
 import java.util.UUID;
 
+import ninja.egg82.enums.SQLType;
 import ninja.egg82.events.SQLEventArgs;
 import ninja.egg82.patterns.events.EventArgs;
 import ninja.egg82.patterns.events.EventHandler;
@@ -24,4 +25,6 @@ public interface ISQL {
 	EventHandler<EventArgs> onDisconnect();
 	EventHandler<SQLEventArgs> onData();
 	EventHandler<SQLEventArgs> onError();
+	
+	SQLType getType();
 }
