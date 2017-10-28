@@ -44,7 +44,7 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 	}
 	@SuppressWarnings("unchecked")
 	public ExpiringRegistry(K[] keyArray, long registerExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy expirationPolicy) {
-		this.keyClass = (Class<K>) keyArray.getClass();
+		this.keyClass = (Class<K>) keyArray.getClass().getComponentType();
 		keyCache = (K[]) Array.newInstance(keyClass, 0);
 		
 		registry = ExpiringMap.builder()
