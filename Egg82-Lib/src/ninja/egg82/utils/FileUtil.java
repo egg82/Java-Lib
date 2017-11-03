@@ -28,8 +28,22 @@ public final class FileUtil {
     }
     
     //public
+    public static void createFile(File file) throws Exception {
+    	createFile(file, true);
+    }
     public static void createFile(String path) throws Exception {
     	createFile(path, true);
+    }
+    
+    public static void createFile(File file, boolean createDirectory) throws Exception {
+    	if (createDirectory) {
+    		File d = new File(file.getParent());
+    		if (d != null) {
+    			d.mkdirs();
+    		}
+    	}
+    	
+		file.createNewFile();
     }
     public static void createFile(String path, boolean createDirectory) throws Exception {
     	File f = new File(path);
@@ -43,6 +57,14 @@ public final class FileUtil {
     	
 		f.createNewFile();
     }
+    
+    public static void deleteFile(File file) {
+    	if (!pathIsFile(file)) {
+    		throw new RuntimeException("Path is not a file.");
+    	}
+    	
+    	file.delete();
+    }
     public static void deleteFile(String path) {
     	if (!pathIsFile(path)) {
     		throw new RuntimeException("Path is not a file.");
@@ -52,6 +74,13 @@ public final class FileUtil {
     	f.delete();
     }
     
+    public static void createDirectory(File file) {
+    	if (pathExists(file)) {
+    		return;
+    	}
+    	
+		file.mkdirs();
+    }
     public static void createDirectory(String path) {
     	if (pathExists(path)) {
     		return;
@@ -59,6 +88,25 @@ public final class FileUtil {
     	
     	File d = new File(path);
 		d.mkdirs();
+    }
+    
+    public static void deleteDirectory(File file) {
+    	if (!pathExists(file)) {
+    		return;
+    	}
+    	if (pathIsFile(file)) {
+    		throw new RuntimeException("Path is not a directory.");
+    	}
+    	
+    	for (File p : file.listFiles()) {
+    		if (p.isFile()) {
+    			p.delete();
+    		} else {
+    			deleteDirectory(p.getPath());
+    		}
+    	}
+    	
+		file.delete();
     }
     public static void deleteDirectory(String path) {
     	if (!pathExists(path)) {
@@ -81,6 +129,17 @@ public final class FileUtil {
 		d.delete();
     }
     
+    public static boolean pathIsFile(File file) {
+    	if (!pathExists(file)) {
+    		return false;
+    	}
+    	
+    	try {
+    		return file.isFile();
+    	} catch (Exception ex) {
+    		return false;
+    	}
+    }
     public static boolean pathIsFile(String path) {
     	if (!pathExists(path)) {
     		return false;
@@ -89,6 +148,18 @@ public final class FileUtil {
     	File p = new File(path);
     	try {
     		return p.isFile();
+    	} catch (Exception ex) {
+    		return false;
+    	}
+    }
+    
+    public static boolean pathExists(File file) {
+    	if (file == null) {
+    		return false;
+    	}
+    	
+    	try {
+    		return file.exists();
     	} catch (Exception ex) {
     		return false;
     	}
@@ -105,6 +176,18 @@ public final class FileUtil {
     		return false;
     	}
     }
+    
+    public static boolean fileIsLocked(File file) {
+    	if (!pathExists(file) || !pathIsFile(file)) {
+    		return false;
+    	}
+    	
+    	try {
+    		return (file.canRead() && file.canWrite()) ? false : true;
+    	} catch (Exception ex) {
+    		return false;
+    	}
+    }
     public static boolean fileIsLocked(String path) {
     	if (!pathExists(path) || !pathIsFile(path)) {
     		return false;
@@ -115,6 +198,31 @@ public final class FileUtil {
     		return (f.canRead() && f.canWrite()) ? false : true;
     	} catch (Exception ex) {
     		return false;
+    	}
+    }
+    
+    public static long getTotalBytes(File file) {
+    	if (!pathExists(file) || !pathIsFile(file)) {
+    		return 0L;
+    	}
+    	
+    	String path = file.getAbsolutePath();
+    	if (inStreams.containsKey(path)) {
+    		try {
+	    		long oldPosition = inStreams.get(path).getChannel().position();
+	    		inStreams.get(path).getChannel().position(0L);
+	    		long available = inStreams.get(path).available();
+	    		inStreams.get(path).getChannel().position(oldPosition);
+	    		return available;
+    		} catch (Exception ex) {
+	    		return 0L;
+	    	}
+    	}
+    	
+    	try {
+    		return file.length();
+    	} catch (Exception ex) {
+    		return 0L;
     	}
     }
     public static long getTotalBytes(String path) {
@@ -145,11 +253,21 @@ public final class FileUtil {
     	if (path == null) {
     		throw new ArgumentNullException("path");
     	}
-    	if (!pathExists(path)) {
+    	
+    	open(new File(path));
+    }
+    public static void open(File file) throws Exception {
+    	if (file == null) {
+    		throw new ArgumentNullException("file");
+    	}
+    	
+    	String path = file.getAbsolutePath();
+    	
+    	if (!pathExists(file)) {
     		throw new RuntimeException("Path does not exist.");
     	}
-    	if (!pathIsFile(path)) {
-    		throw new RuntimeException("Path is not a fale.");
+    	if (!pathIsFile(file)) {
+    		throw new RuntimeException("Path is not a file.");
     	}
     	
     	if (inStreams.containsKey(path) || outStreams.containsKey(path)) {
@@ -157,14 +275,24 @@ public final class FileUtil {
     	}
     	
     	inStreams.putIfAbsent(path, new FileInputStream(path));
-    	byte[] old = read(path, 0);
+    	byte[] old = read(file, 0);
     	outStreams.putIfAbsent(path, new FileOutputStream(path, false));
-    	write(path, old, 0);
+    	write(file, old, 0);
     }
     public static void close(String path) throws Exception {
     	if (path == null) {
     		throw new ArgumentNullException("path");
     	}
+    	
+    	close(new File(path));
+    }
+    public static void close(File file) throws Exception {
+    	if (file == null) {
+    		throw new ArgumentNullException("file");
+    	}
+    	
+    	String path = file.getAbsolutePath();
+    	
     	if (!inStreams.containsKey(path) && !outStreams.containsKey(path)) {
     		return;
     	}
@@ -193,16 +321,31 @@ public final class FileUtil {
     }
     
     public static boolean isOpen(String path) {
-    	return (path != null && inStreams.containsKey(path)) ? true : false;
+    	return (path != null) ? isOpen(new File(path)) : false;
+    }
+    public static boolean isOpen(File file) {
+    	return (file != null && inStreams.containsKey(file.getAbsolutePath())) ? true : false;
     }
     
     public static byte[] read(String path, long position) throws Exception {
     	return read(path, position, -1L);
     }
+    public static byte[] read(File file, long position) throws Exception {
+    	return read(file, position, -1L);
+    }
     public static byte[] read(String path, long position, long length) throws Exception {
     	if (path == null) {
     		throw new ArgumentNullException("path");
     	}
+    	
+    	return read(new File(path), position, length);
+    }
+    public static byte[] read(File file, long position, long length) throws Exception {
+    	if (file == null) {
+    		throw new ArgumentNullException("file");
+    	}
+    	
+    	String path = file.getAbsolutePath();
     	
     	FileInputStream stream = inStreams.get(path);
     	if (stream == null) {
@@ -225,14 +368,21 @@ public final class FileUtil {
     	return buffer;
     }
     public static void write(String path, byte[] bytes, long position) throws Exception {
-    	if (bytes == null || bytes.length == 0) {
-    		return;
-    	}
     	if (path == null) {
     		throw new ArgumentNullException("path");
     	}
     	
-    	FileOutputStream stream = outStreams.get(path);
+    	write(new File(path), bytes, position);
+    }
+    public static void write(File file, byte[] bytes, long position) throws Exception {
+    	if (file == null) {
+    		throw new ArgumentNullException("file");
+    	}
+    	if (bytes == null || bytes.length == 0) {
+    		return;
+    	}
+    	
+    	FileOutputStream stream = outStreams.get(file.getAbsolutePath());
     	if (stream == null) {
     		throw new RuntimeException("File is not open.");
     	}
@@ -250,6 +400,15 @@ public final class FileUtil {
     	if (path == null) {
     		throw new ArgumentNullException("path");
     	}
+    	
+    	erase(new File(path));
+    }
+    public static void erase(File file) throws Exception {
+    	if (file == null) {
+    		throw new ArgumentNullException("file");
+    	}
+    	
+    	String path = file.getAbsolutePath();
     	
     	FileOutputStream stream = outStreams.get(path);
     	if (stream != null) {
