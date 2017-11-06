@@ -15,6 +15,7 @@ import org.reflections.scanners.TypeElementsScanner;
 import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
+import org.slf4j.Logger;
 
 import com.google.common.collect.Sets;
 
@@ -138,6 +139,9 @@ public final class ReflectUtil {
 			throw new ArgumentNullException("pkg");
 		}
 		
+		Logger oldLog = Reflections.log;
+		Reflections.log = null;
+		
 		String excludeString = null;
 		if (excludePackages != null && excludePackages.length > 0) {
 			for (int i = 0; i < excludePackages.length; i++) {
@@ -162,6 +166,7 @@ public final class ReflectUtil {
 			
 			ref = new Reflections(config);
 		} catch (Exception ex) {
+			Reflections.log = oldLog;
 			return new ArrayList<Class<T>>();
 		}
 		
@@ -199,6 +204,8 @@ public final class ReflectUtil {
 			
 			list.add((Class<T>) next);
 		}
+		
+		Reflections.log = oldLog;
 		
 		return list;
 	}

@@ -8,12 +8,15 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 
 import javax.swing.Timer;
 
 import org.apache.commons.lang.NotImplementedException;
 
+import ninja.egg82.core.NamedParameterStatement;
 import ninja.egg82.core.SQLData;
 import ninja.egg82.core.SQLError;
 import ninja.egg82.enums.SQLType;
@@ -32,9 +35,8 @@ public class MySQL implements ISQL {
 	private final EventHandler<SQLEventArgs> error = new EventHandler<SQLEventArgs>();
 	
 	private Connection conn = null;
-	private PreparedStatement command = null;
 	
-	private IObjectPool<Triplet<String, Object[], UUID>> backlog = null;
+	private IObjectPool<Triplet<String, Object, UUID>> backlog = null;
 	private volatile boolean busy = false;
 	private volatile boolean connected = false;
 	private Timer backlogTimer = null;
@@ -65,7 +67,7 @@ public class MySQL implements ISQL {
 		
 		connected =  false;
 		busy = true;
-		backlog = new DynamicObjectPool<Triplet<String, Object[], UUID>>();
+		backlog = new DynamicObjectPool<Triplet<String, Object, UUID>>();
 		connected = true;
 		backlogTimer.start();
 		connect.invoke(this, EventArgs.EMPTY);
@@ -96,7 +98,6 @@ public class MySQL implements ISQL {
 		
 		backlogTimer.stop();
 		conn = null;
-		command = null;
 		backlog.clear();
 		connected = false;
 		busy = false;
@@ -111,15 +112,39 @@ public class MySQL implements ISQL {
 		UUID u = UUID.randomUUID();
 		
 		if (!connected) {
-			backlog.add(new Triplet<String, Object[], UUID>(q, queryParams, u));
+			backlog.add(new Triplet<String, Object, UUID>(q, queryParams, u));
 		} else {
 			if (busy || backlog.size() > 0) {
-				backlog.add(new Triplet<String, Object[], UUID>(q, queryParams, u));
+				backlog.add(new Triplet<String, Object, UUID>(q, queryParams, u));
 			} else {
 				busy = true;
 				new Thread(new Runnable() {
 					public void run() {
 						queryInternal(q, queryParams, u);
+					}
+				}).start();
+			}
+		}
+		
+		return u;
+	}
+	public UUID query(String q, Map<String, Object> namedQueryParams) {
+		if (q == null || q.isEmpty()) {
+			throw new IllegalArgumentException("q cannot be null or empty.");
+		}
+		
+		UUID u = UUID.randomUUID();
+		
+		if (!connected) {
+			backlog.add(new Triplet<String, Object, UUID>(q, namedQueryParams, u));
+		} else {
+			if (busy || backlog.size() > 0) {
+				backlog.add(new Triplet<String, Object, UUID>(q, namedQueryParams, u));
+			} else {
+				busy = true;
+				new Thread(new Runnable() {
+					public void run() {
+						queryInternal(q, namedQueryParams, u);
 					}
 				}).start();
 			}
@@ -157,10 +182,12 @@ public class MySQL implements ISQL {
 	
 	//private
 	private void queryInternal(String q, Object[] parameters, UUID u) {
+		PreparedStatement command = null;
+		
 		try {
 			command = conn.prepareStatement(q);
 		} catch (Exception ex) {
-			error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+			error.invoke(this, new SQLEventArgs(q, parameters, null, new SQLError(ex), new SQLData(), u));
 			sendNextInternal();
 			return;
 		}
@@ -171,16 +198,44 @@ public class MySQL implements ISQL {
 					command.setObject(i + 1, parameters[i]);
 				}
 			} catch (Exception ex) {
-				error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+				error.invoke(this, new SQLEventArgs(q, parameters, null, new SQLError(ex), new SQLData(), u));
 				sendNextInternal();
 				return;
 			}
 		}
 		
+		execute(command, q, parameters, null, u);
+	}
+	private void queryInternal(String q, Map<String, Object> parameters, UUID u) {
+		NamedParameterStatement command = null;
+		
+		try {
+			command = new NamedParameterStatement(conn, q);
+		} catch (Exception ex) {
+			error.invoke(this, new SQLEventArgs(q, null, parameters, new SQLError(ex), new SQLData(), u));
+			sendNextInternal();
+			return;
+		}
+		
+		if (parameters != null && parameters.size() > 0) {
+			try {
+				for (Entry<String, Object> kvp : parameters.entrySet()) {
+					command.setObject(kvp.getKey(), kvp.getValue());
+				}
+			} catch (Exception ex) {
+				error.invoke(this, new SQLEventArgs(q, null, parameters, new SQLError(ex), new SQLData(), u));
+				sendNextInternal();
+				return;
+			}
+		}
+		
+		execute(command.getPreparedStatement(), q, null, parameters, u);
+	}
+	private void execute(PreparedStatement command, String q, Object[] parameters, Map<String, Object> namedParameters, UUID u) {
 		try {
 			command.execute();
 		} catch (Exception ex) {
-			error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+			error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
 			sendNextInternal();
 			return;
 		}
@@ -189,7 +244,7 @@ public class MySQL implements ISQL {
 		try {
 			d.recordsAffected = command.getUpdateCount();
 		} catch (Exception ex) {
-			error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+			error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
 			sendNextInternal();
 			return;
 		}
@@ -198,7 +253,7 @@ public class MySQL implements ISQL {
 		try {
 			results = command.getResultSet();
 		} catch (Exception ex) {
-			error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+			error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
 			sendNextInternal();
 			return;
 		}
@@ -208,7 +263,7 @@ public class MySQL implements ISQL {
 			try {
 				metaData = results.getMetaData();
 			} catch (Exception ex) {
-				error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
 				sendNextInternal();
 				return;
 			}
@@ -218,7 +273,7 @@ public class MySQL implements ISQL {
 					tColumns.add(metaData.getColumnName(i));
 				}
 			} catch (Exception ex) {
-				error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
 				sendNextInternal();
 				return;
 			}
@@ -234,7 +289,7 @@ public class MySQL implements ISQL {
 					tData.add(tVals);
 				}
 			} catch (Exception ex) {
-				error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
 				sendNextInternal();
 				return;
 			}
@@ -251,7 +306,7 @@ public class MySQL implements ISQL {
 					}
 				};
 			} catch (Exception ex) {
-				error.invoke(this, new SQLEventArgs(q, parameters, new SQLError(ex), new SQLData(), u));
+				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
 				sendNextInternal();
 				return;
 			}
@@ -263,24 +318,29 @@ public class MySQL implements ISQL {
 				}
 			}
 			
-			data.invoke(this, new SQLEventArgs(q, parameters, new SQLError(), d, u));
+			data.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(), d, u));
 			sendNextInternal();
 		} else {
 			d.columns = new String[0];
 			d.data = new Object[0][];
-			data.invoke(this, new SQLEventArgs(q, parameters, new SQLError(), d, u));
+			data.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(), d, u));
 			sendNextInternal();
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
 	private void sendNext() {
 		if (backlog.size() == 0) {
 			busy = false;
 			return;
 		}
 		
-		Triplet<String, Object[], UUID> first = backlog.popFirst();
-		queryInternal(first.getLeft(), first.getCenter(), first.getRight());
+		Triplet<String, Object, UUID> first = backlog.popFirst();
+		if (first.getCenter() instanceof Map) {
+			queryInternal(first.getLeft(), (Map<String, Object>) first.getCenter(), first.getRight());
+		} else {
+			queryInternal(first.getLeft(), (Object[]) first.getCenter(), first.getRight());
+		}
 	}
 	private void sendNextInternal() {
 		new Thread(new Runnable() {

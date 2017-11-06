@@ -1,5 +1,6 @@
 package ninja.egg82.sql;
 
+import java.util.Map;
 import java.util.UUID;
 
 import ninja.egg82.enums.SQLType;
@@ -16,6 +17,7 @@ public interface ISQL {
 	void disconnect();
 	
 	UUID query(String q, Object... queryParams);
+	UUID query(String q, Map<String, Object> namedQueryParams);
 	
 	boolean isConnected();
 	boolean isBusy();
