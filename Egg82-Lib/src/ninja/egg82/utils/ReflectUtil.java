@@ -107,6 +107,19 @@ public final class ReflectUtil {
 	    
 	    return find;
 	}
+	public static boolean hasMethod(String method, Object obj) {
+		if (obj == null) {
+			return false;
+		}
+	    
+	    try {
+	        obj.getClass().getDeclaredMethod(method);
+	    } catch (Exception ex) {
+	        return false;
+	    }
+	    
+	    return true;
+	}
 	
 	public static Object[] getStaticFields(Class<?> c) {
 		if (c == null) {

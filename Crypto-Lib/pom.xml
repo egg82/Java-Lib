@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>crypto-lib</artifactId>
-  <version>1.0.2</version>
+  <version>1.0.3</version>
   <name>egg82-crypto-lib</name>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -26,6 +26,15 @@
             </goals>
             <configuration>
               <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>META-INF/spring.handlers</resource>
+                </transformer>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>META-INF/spring.schemas</resource>
+                </transformer>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>META-INF/spring.tooling</resource>
+                </transformer>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
               </transformers>
               <filters>
@@ -45,6 +54,9 @@
                 <relocation>
                   <pattern>org.bouncycastle</pattern>
                   <shadedPattern>ninja.egg82.lib.org.bouncycastle</shadedPattern>
+                  <excludes>
+                    <exclude>org.bouncycastle.x509.*</exclude>
+                  </excludes>
                 </relocation>
               </relocations>
             </configuration>

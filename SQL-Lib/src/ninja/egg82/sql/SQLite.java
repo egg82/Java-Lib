@@ -2,6 +2,13 @@ package ninja.egg82.sql;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -9,6 +16,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.Map.Entry;
 
@@ -42,8 +50,23 @@ public class SQLite implements ISQL {
 	private volatile boolean connected = false;
 	private Timer backlogTimer = null;
 	
+	private volatile static Method m = null;
+	private volatile static URLClassLoader loader = null;
+	private static final String SQLITE_JAR = "https://bitbucket.org/xerial/sqlite-jdbc/downloads/sqlite-jdbc-3.21.0.jar";
+	
 	//constructor
 	public SQLite() {
+		if (m == null || loader == null) {
+			File file = getSQLiteFile();
+			try {
+				loader = new URLClassLoader(new URL[] {file.toURI().toURL()});
+				m = DriverManager.class.getDeclaredMethod("getConnection", String.class, Properties.class, Class.class);
+				m.setAccessible(true);
+			} catch (Exception ex) {
+				
+			}
+		}
+		
 		backlogTimer = new Timer(100, onBacklogTimer);
 		backlogTimer.setRepeats(true);
 	}
@@ -73,7 +96,7 @@ public class SQLite implements ISQL {
 		}
 		
 		try {
-			conn = DriverManager.getConnection("jdbc:sqlite:" + filePath);
+			conn = (Connection) m.invoke(null, "jdbc:sqlite:" + filePath, new Properties(), Class.forName("org.sqlite.JDBC", true, loader));
 		} catch (Exception ex) {
 			throw new RuntimeException("Could not connect to database.", ex);
 		}
@@ -366,4 +389,25 @@ public class SQLite implements ISQL {
 			}
 		}
 	};
+	
+	private static File getSQLiteFile() {
+		File file = new File("sqlite.jar");
+		
+		if (FileUtil.pathExists(file) && !FileUtil.pathIsFile(file)) {
+			FileUtil.deleteDirectory(file);
+		}
+		if (!FileUtil.pathExists(file)) {
+			URL url = null;
+			try {
+				url = new URL(SQLITE_JAR);
+				InputStream in = url.openStream();
+				Files.copy(in, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+				in.close();
+			} catch (Exception ex) {
+				
+			}
+		}
+		
+		return file;
+	}
 }
