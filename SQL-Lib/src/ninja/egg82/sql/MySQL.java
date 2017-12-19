@@ -2,15 +2,25 @@ package ninja.egg82.sql;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Map.Entry;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import javax.swing.Timer;
 
@@ -26,6 +36,7 @@ import ninja.egg82.patterns.IObjectPool;
 import ninja.egg82.patterns.events.EventArgs;
 import ninja.egg82.patterns.events.EventHandler;
 import ninja.egg82.patterns.tuples.Triplet;
+import ninja.egg82.utils.FileUtil;
 
 public class MySQL implements ISQL {
 	//vars
@@ -41,8 +52,25 @@ public class MySQL implements ISQL {
 	private volatile boolean connected = false;
 	private Timer backlogTimer = null;
 	
+	private volatile static Method m = null;
+	private volatile static URLClassLoader loader = null;
+	private static final String MYSQL_JAR = "https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.45.zip";
+	
 	//constructor
 	public MySQL() {
+		if (m == null || loader == null) {
+			File file = getMySQLFile();
+			try {
+				loader = new URLClassLoader(new URL[] {file.toURI().toURL()});
+				m = DriverManager.class.getDeclaredMethod("getConnection", String.class, Properties.class, Class.class);
+				m.setAccessible(true);
+				
+				DriverManager.registerDriver((Driver) Class.forName("com.mysql.jdbc.Driver", true, loader).newInstance());
+			} catch (Exception ex) {
+				
+			}
+		}
+		
 		backlogTimer = new Timer(100, onBacklogTimer);
 		backlogTimer.setRepeats(true);
 	}
@@ -59,8 +87,12 @@ public class MySQL implements ISQL {
 			throw new IllegalArgumentException("port cannot be <= 0.");
 		}
 		
+		Properties props = new Properties();
+		props.put("user", user);
+		props.put("password", pass);
+		
 		try {
-			conn = DriverManager.getConnection("jdbc:mysql:" + address + ":" + port + "/" + dbName, user, pass);
+			conn = (Connection) m.invoke(null, "jdbc:mysql://" + address + ":" + port + "/" + dbName, props, Class.forName("com.mysql.jdbc.Driver", true, loader));
 		} catch (Exception ex) {
 			throw new RuntimeException("Could not connect to database.", ex);
 		}
@@ -358,4 +390,53 @@ public class MySQL implements ISQL {
 			}
 		}
 	};
+	
+	private static File getMySQLFile() {
+		File file = new File("libs" + FileUtil.DIRECTORY_SEPARATOR_CHAR + "mysql.jar");
+		
+		if (FileUtil.pathExists(file) && !FileUtil.pathIsFile(file)) {
+			FileUtil.deleteDirectory(file);
+		}
+		if (!FileUtil.pathExists(file)) {
+			URL url = null;
+			try {
+				File d = new File(file.getParent());
+	    		if (d != null) {
+	    			d.mkdirs();
+	    		}
+				
+				url = new URL(MYSQL_JAR);
+				ZipInputStream zip = new ZipInputStream(url.openStream());
+				ZipEntry entry = null;
+				
+				do {
+					entry = zip.getNextEntry();
+					if (entry.getName().equals("mysql-connector-java-5.1.45\\mysql-connector-java-5.1.45-bin.jar") || entry.getName().equals("mysql-connector-java-5.1.45/mysql-connector-java-5.1.45-bin.jar")) {
+						break;
+					}
+				} while (entry != null);
+				
+				if (entry == null) {
+					zip.close();
+					return file;
+				}
+				
+				OutputStream out = new FileOutputStream(file);
+				
+				byte[] buffer = new byte[1024];
+				int len = zip.read(buffer);
+				while (len != -1) {
+					out.write(buffer, 0, len);
+					len = zip.read(buffer);
+				};
+				
+				out.close();
+				zip.close();
+			} catch (Exception ex) {
+				
+			}
+		}
+		
+		return file;
+	}
 }

@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>sql-lib</artifactId>
-  <version>1.3.9</version>
+  <version>1.3.10</version>
   <name>egg82-sql-lib</name>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -43,12 +43,6 @@
                   </excludes>
                 </filter>
                 <filter>
-                  <artifact>mysql:mysql-connector-java</artifact>
-                  <includes>
-                    <include>com/mysql/**</include>
-                  </includes>
-                </filter>
-                <filter>
                   <artifact>commons-lang:commons-lang</artifact>
                   <includes>
                     <include>org/apache/**</include>
@@ -57,13 +51,6 @@
               </filters>
               <minimizeJar>true</minimizeJar>
               <relocations>
-                <relocation>
-                  <pattern>com.mysql</pattern>
-                  <shadedPattern>ninja.egg82.lib.com.mysql</shadedPattern>
-                  <excludes>
-                    <exclude>com.mysql.jdbc.*</exclude>
-                  </excludes>
-                </relocation>
                 <relocation>
                   <pattern>org.apache</pattern>
                   <shadedPattern>ninja.egg82.lib.org.apache</shadedPattern>
@@ -91,11 +78,6 @@
       <groupId>ninja.egg82.lib</groupId>
       <artifactId>egg82-lib</artifactId>
       <version>2.6.32</version>
-    </dependency>
-    <dependency>
-      <groupId>mysql</groupId>
-      <artifactId>mysql-connector-java</artifactId>
-      <version>6.0.6</version>
     </dependency>
     <!-- One of the SQL deps needs this -->
     <dependency>

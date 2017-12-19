@@ -10,6 +10,7 @@ import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -62,6 +63,8 @@ public class SQLite implements ISQL {
 				loader = new URLClassLoader(new URL[] {file.toURI().toURL()});
 				m = DriverManager.class.getDeclaredMethod("getConnection", String.class, Properties.class, Class.class);
 				m.setAccessible(true);
+				
+				DriverManager.registerDriver((Driver) Class.forName("org.sqlite.JDBC", true, loader).newInstance());
 			} catch (Exception ex) {
 				
 			}
@@ -391,7 +394,7 @@ public class SQLite implements ISQL {
 	};
 	
 	private static File getSQLiteFile() {
-		File file = new File("sqlite.jar");
+		File file = new File("libs" + FileUtil.DIRECTORY_SEPARATOR_CHAR + "sqlite.jar");
 		
 		if (FileUtil.pathExists(file) && !FileUtil.pathIsFile(file)) {
 			FileUtil.deleteDirectory(file);
@@ -399,6 +402,11 @@ public class SQLite implements ISQL {
 		if (!FileUtil.pathExists(file)) {
 			URL url = null;
 			try {
+				File d = new File(file.getParent());
+	    		if (d != null) {
+	    			d.mkdirs();
+	    		}
+				
 				url = new URL(SQLITE_JAR);
 				InputStream in = url.openStream();
 				Files.copy(in, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
