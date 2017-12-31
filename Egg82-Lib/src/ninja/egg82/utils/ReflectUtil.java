@@ -107,6 +107,21 @@ public final class ReflectUtil {
 	    
 	    return find;
 	}
+	public static Method getMethod(String method, Class<?> c) {
+		if (c == null) {
+			return null;
+		}
+		
+		Method find;
+	    
+	    try {
+	        find = c.getDeclaredMethod(method);
+	    } catch (Exception ex) {
+	        return null;
+	    }
+	    
+	    return find;
+	}
 	public static boolean hasMethod(String method, Object obj) {
 		if (obj == null) {
 			return false;
@@ -114,6 +129,19 @@ public final class ReflectUtil {
 	    
 	    try {
 	        obj.getClass().getDeclaredMethod(method);
+	    } catch (Exception ex) {
+	        return false;
+	    }
+	    
+	    return true;
+	}
+	public static boolean hasMethod(String method, Class<?> c) {
+		if (c == null) {
+			return false;
+		}
+	    
+	    try {
+	        c.getDeclaredMethod(method);
 	    } catch (Exception ex) {
 	        return false;
 	    }

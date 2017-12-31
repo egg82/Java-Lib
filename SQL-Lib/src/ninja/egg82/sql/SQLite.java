@@ -78,7 +78,7 @@ public class SQLite implements ISQL {
 	public void connect(String address, String user, String pass, String dbName) {
 		throw new NotImplementedException("This database type does not support external (non-file) databases.");
 	}
-	public void connect(String address, short port, String user, String pass, String dbName) {
+	public void connect(String address, int port, String user, String pass, String dbName) {
 		throw new NotImplementedException("This database type does not support external (non-file) databases.");
 	}
 	public void connect(String filePath) {
@@ -104,7 +104,6 @@ public class SQLite implements ISQL {
 			throw new RuntimeException("Could not connect to database.", ex);
 		}
 		
-		connected =  false;
 		busy = true;
 		backlog = new DynamicObjectPool<Triplet<String, Object, UUID>>();
 		connected = true;

@@ -79,12 +79,12 @@ public class MySQL implements ISQL {
 	public void connect(String address, String user, String pass, String dbName) {
 		connect(address, (short) 3306, user, pass, dbName);
 	}
-	public void connect(String address, short port, String user, String pass, String dbName) {
+	public void connect(String address, int port, String user, String pass, String dbName) {
 		if (address == null || address.isEmpty()) {
 			throw new IllegalArgumentException("address cannot be null or empty.");
 		}
-		if (port <= 0) {
-			throw new IllegalArgumentException("port cannot be <= 0.");
+		if (port <= 0 || port > 65535) {
+			throw new IllegalArgumentException("port cannot be <= 0 or > 65535");
 		}
 		
 		Properties props = new Properties();
@@ -97,7 +97,6 @@ public class MySQL implements ISQL {
 			throw new RuntimeException("Could not connect to database.", ex);
 		}
 		
-		connected =  false;
 		busy = true;
 		backlog = new DynamicObjectPool<Triplet<String, Object, UUID>>();
 		connected = true;

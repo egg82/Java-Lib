@@ -2,7 +2,6 @@ package ninja.egg82.patterns;
 
 import java.lang.reflect.Array;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 import net.jodah.expiringmap.ExpirationPolicy;
@@ -19,38 +18,40 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 	private Class<K> keyClass = null;
 	private K[] keyCache = null;
 	private volatile boolean keysDirty = false;
-	private ConcurrentMap<K, Pair<Class<?>, Unit<Object>>> registry = null;
+	private ExpiringMap<K, Pair<Class<?>, Unit<Object>>> registry = null;
 	private ConcurrentHashMap<Unit<Object>, K> reverseRegistry = new ConcurrentHashMap<Unit<Object>, K>();
 	
 	private final EventHandler<ExpireEventArgs<K>> expire = new EventHandler<ExpireEventArgs<K>>();
 	
 	//constructor
-	public ExpiringRegistry(Class<K> keyClass, long registerExpirationTimeMilliseconds) {
-		this(keyClass, registerExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy.CREATED);
+	public ExpiringRegistry(Class<K> keyClass, long defaultRegisterExpirationTimeMilliseconds) {
+		this(keyClass, defaultRegisterExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy.CREATED);
 	}
-	public ExpiringRegistry(K[] keyArray, long registerExpirationTimeMilliseconds) {
-		this(keyArray, registerExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy.CREATED);
+	public ExpiringRegistry(K[] keyArray, long defaultRegisterExpirationTimeMilliseconds) {
+		this(keyArray, defaultRegisterExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy.CREATED);
 	}
 	@SuppressWarnings("unchecked")
-	public ExpiringRegistry(Class<K> keyClass, long registerExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy expirationPolicy) {
+	public ExpiringRegistry(Class<K> keyClass, long defaultRegisterExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy defaultExpirationPolicy) {
 		this.keyClass = keyClass;
 		keyCache = (K[]) Array.newInstance(keyClass, 0);
 		
 		registry = ExpiringMap.builder()
-			.expiration(registerExpirationTimeMilliseconds, TimeUnit.MILLISECONDS)
-			.expirationPolicy(ExpirationPolicy.valueOf(expirationPolicy.name()))
+			.expiration(defaultRegisterExpirationTimeMilliseconds, TimeUnit.MILLISECONDS)
+			.expirationPolicy(ExpirationPolicy.valueOf(defaultExpirationPolicy.name()))
 			.expirationListener((k, v) -> onRegisterExpiration((K) k, (Pair<Class<?>, Unit<Object>>) v))
+			.variableExpiration()
 			.build();
 	}
 	@SuppressWarnings("unchecked")
-	public ExpiringRegistry(K[] keyArray, long registerExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy expirationPolicy) {
+	public ExpiringRegistry(K[] keyArray, long defaultRegisterExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy defaultExpirationPolicy) {
 		this.keyClass = (Class<K>) keyArray.getClass().getComponentType();
 		keyCache = (K[]) Array.newInstance(keyClass, 0);
 		
 		registry = ExpiringMap.builder()
-			.expiration(registerExpirationTimeMilliseconds, TimeUnit.MILLISECONDS)
-			.expirationPolicy(ExpirationPolicy.valueOf(expirationPolicy.name()))
+			.expiration(defaultRegisterExpirationTimeMilliseconds, TimeUnit.MILLISECONDS)
+			.expirationPolicy(ExpirationPolicy.valueOf(defaultExpirationPolicy.name()))
 			.expirationListener((k, v) -> onRegisterExpiration((K) k, (Pair<Class<?>, Unit<Object>>) v))
+			.variableExpiration()
 			.build();
 	}
 	
@@ -77,6 +78,91 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 		}
 		
 		reverseRegistry.put(unit, key);
+	}
+	public final void setRegister(K key, Object data, long expirationTimeMilliseconds) {
+		if (key == null) {
+			throw new ArgumentNullException("key");
+		}
+		
+		Pair<Class<?>, Unit<Object>> pair = registry.get(key);
+		Unit<Object> unit = new Unit<Object>(data);
+		registry.put(key, new Pair<Class<?>, Unit<Object>>((data != null) ? data.getClass() : null, unit), expirationTimeMilliseconds, TimeUnit.MILLISECONDS);
+		
+		if (pair == null) {
+			// Key didn't exist before. Added.
+			keysDirty = true;
+		} else {
+			// Key existed before. Need to remove old value->key from reverse registry.
+			reverseRegistry.remove(pair.getRight());
+		}
+		
+		reverseRegistry.put(unit, key);
+	}
+	public final void setRegister(K key, Object data, long expirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy policy) {
+		if (key == null) {
+			throw new ArgumentNullException("key");
+		}
+		
+		Pair<Class<?>, Unit<Object>> pair = registry.get(key);
+		Unit<Object> unit = new Unit<Object>(data);
+		registry.put(key, new Pair<Class<?>, Unit<Object>>((data != null) ? data.getClass() : null, unit), ExpirationPolicy.valueOf(policy.name()), expirationTimeMilliseconds, TimeUnit.MILLISECONDS);
+		
+		if (pair == null) {
+			// Key didn't exist before. Added.
+			keysDirty = true;
+		} else {
+			// Key existed before. Need to remove old value->key from reverse registry.
+			reverseRegistry.remove(pair.getRight());
+		}
+		
+		reverseRegistry.put(unit, key);
+	}
+	public final void setRegisterExpiration(K key, long expirationTimeMilliseconds) {
+		if (key == null) {
+			throw new ArgumentNullException("key");
+		}
+		
+		registry.setExpiration(key, expirationTimeMilliseconds, TimeUnit.MILLISECONDS);
+	}
+	public final void setRegisterPolicy(K key, ninja.egg82.enums.ExpirationPolicy policy) {
+		if (key == null) {
+			throw new ArgumentNullException("key");
+		}
+		
+		registry.setExpirationPolicy(key, ExpirationPolicy.valueOf(policy.name()));
+	}
+	public final long getExpirationTime(K key) {
+		if (key == null) {
+			throw new ArgumentNullException("key");
+		}
+		
+		try {
+			return registry.getExpiration(key);
+		} catch (Exception ex) {
+			
+		}
+		
+		return -1L;
+	}
+	public final long getTimeRemaining(K key) {
+		if (key == null) {
+			throw new ArgumentNullException("key");
+		}
+		
+		try {
+			return registry.getExpectedExpiration(key);
+		} catch (Exception ex) {
+			
+		}
+		
+		return -1L;
+	}
+	public final void resetExpirationTime(K key) {
+		if (key == null) {
+			throw new ArgumentNullException("key");
+		}
+		
+		registry.resetExpiration(key);
 	}
 	public final Object removeRegister(K key) {
 		if (key == null) {

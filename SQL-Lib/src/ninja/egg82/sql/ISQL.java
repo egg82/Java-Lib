@@ -10,7 +10,7 @@ import ninja.egg82.patterns.events.EventHandler;
 
 public interface ISQL {
 	//functions
-	void connect(String address, short port, String user, String pass, String dbName);
+	void connect(String address, int port, String user, String pass, String dbName);
 	void connect(String address, String user, String pass, String dbName);
 	void connect(String filePath);
 	
