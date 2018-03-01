@@ -20,6 +20,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.Timer;
 
@@ -54,6 +57,8 @@ public class SQLite implements ISQL {
 	private volatile static Method m = null;
 	private volatile static URLClassLoader loader = null;
 	private static final String SQLITE_JAR = "https://bitbucket.org/xerial/sqlite-jdbc/downloads/sqlite-jdbc-3.21.0.jar";
+	
+	private static ExecutorService threadPool = Executors.newFixedThreadPool(20, Executors.defaultThreadFactory());
 	
 	//constructor
 	public SQLite() {
@@ -110,16 +115,24 @@ public class SQLite implements ISQL {
 		backlogTimer.start();
 		connect.invoke(this, EventArgs.EMPTY);
 		
-		new Thread(new Runnable() {
+		threadPool.execute(new Runnable() {
 			public void run() {
 				sendNext();
 			}
-		}).start();
+		});
 	}
 	
 	public void disconnect() {
 		if (!connected) {
 			return;
+		}
+		
+		try {
+			threadPool.shutdown();
+			threadPool.awaitTermination(3000L, TimeUnit.MILLISECONDS);
+			threadPool.shutdownNow();
+		} catch (Exception ex) {
+			
 		}
 		
 		try {
@@ -150,11 +163,11 @@ public class SQLite implements ISQL {
 				backlog.add(new Triplet<String, Object, UUID>(q, queryParams, u));
 			} else {
 				busy = true;
-				new Thread(new Runnable() {
+				threadPool.execute(new Runnable() {
 					public void run() {
 						queryInternal(q, queryParams, u);
 					}
-				}).start();
+				});
 			}
 		}
 		
@@ -174,11 +187,11 @@ public class SQLite implements ISQL {
 				backlog.add(new Triplet<String, Object, UUID>(q, namedQueryParams, u));
 			} else {
 				busy = true;
-				new Thread(new Runnable() {
+				threadPool.execute(new Runnable() {
 					public void run() {
 						queryInternal(q, namedQueryParams, u);
 					}
-				}).start();
+				});
 			}
 		}
 		
@@ -220,7 +233,7 @@ public class SQLite implements ISQL {
 			command = conn.prepareStatement(q);
 		} catch (Exception ex) {
 			error.invoke(this, new SQLEventArgs(q, parameters, null, new SQLError(ex), new SQLData(), u));
-			sendNextInternal();
+			sendNext();
 			return;
 		}
 		
@@ -231,7 +244,7 @@ public class SQLite implements ISQL {
 				}
 			} catch (Exception ex) {
 				error.invoke(this, new SQLEventArgs(q, parameters, null, new SQLError(ex), new SQLData(), u));
-				sendNextInternal();
+				sendNext();
 				return;
 			}
 		}
@@ -245,7 +258,7 @@ public class SQLite implements ISQL {
 			command = new NamedParameterStatement(conn, q);
 		} catch (Exception ex) {
 			error.invoke(this, new SQLEventArgs(q, null, parameters, new SQLError(ex), new SQLData(), u));
-			sendNextInternal();
+			sendNext();
 			return;
 		}
 		
@@ -256,7 +269,7 @@ public class SQLite implements ISQL {
 				}
 			} catch (Exception ex) {
 				error.invoke(this, new SQLEventArgs(q, null, parameters, new SQLError(ex), new SQLData(), u));
-				sendNextInternal();
+				sendNext();
 				return;
 			}
 		}
@@ -269,7 +282,7 @@ public class SQLite implements ISQL {
 			command.execute();
 		} catch (Exception ex) {
 			error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
-			sendNextInternal();
+			sendNext();
 			return;
 		}
 		
@@ -278,7 +291,7 @@ public class SQLite implements ISQL {
 			d.recordsAffected = command.getUpdateCount();
 		} catch (Exception ex) {
 			error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
-			sendNextInternal();
+			sendNext();
 			return;
 		}
 		
@@ -287,7 +300,7 @@ public class SQLite implements ISQL {
 			results = command.getResultSet();
 		} catch (Exception ex) {
 			error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
-			sendNextInternal();
+			sendNext();
 			return;
 		}
 		
@@ -297,7 +310,7 @@ public class SQLite implements ISQL {
 				metaData = results.getMetaData();
 			} catch (Exception ex) {
 				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
-				sendNextInternal();
+				sendNext();
 				return;
 			}
 			ArrayList<String> tColumns = new ArrayList<String>();
@@ -307,7 +320,7 @@ public class SQLite implements ISQL {
 				}
 			} catch (Exception ex) {
 				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
-				sendNextInternal();
+				sendNext();
 				return;
 			}
 			d.columns = tColumns.toArray(new String[0]);
@@ -323,7 +336,7 @@ public class SQLite implements ISQL {
 				}
 			} catch (Exception ex) {
 				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
-				sendNextInternal();
+				sendNext();
 				return;
 			}
 			
@@ -340,7 +353,7 @@ public class SQLite implements ISQL {
 				};
 			} catch (Exception ex) {
 				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
-				sendNextInternal();
+				sendNext();
 				return;
 			}
 			
@@ -352,12 +365,12 @@ public class SQLite implements ISQL {
 			}
 			
 			data.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(), d, u));
-			sendNextInternal();
+			sendNext();
 		} else {
 			d.columns = new String[0];
 			d.data = new Object[0][];
 			data.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(), d, u));
-			sendNextInternal();
+			sendNext();
 		}
 	}
 	
@@ -369,18 +382,16 @@ public class SQLite implements ISQL {
 		}
 		
 		Triplet<String, Object, UUID> first = backlog.popFirst();
+		if (first == null) {
+			busy = false;
+			return;
+		}
+		
 		if (first.getCenter() instanceof Map) {
 			queryInternal(first.getLeft(), (Map<String, Object>) first.getCenter(), first.getRight());
 		} else {
 			queryInternal(first.getLeft(), (Object[]) first.getCenter(), first.getRight());
 		}
-	}
-	private void sendNextInternal() {
-		new Thread(new Runnable() {
-			public void run() {
-				sendNext();
-			}
-		}).start();
 	}
 	
 	private ActionListener onBacklogTimer = new ActionListener() {

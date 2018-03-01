@@ -10,6 +10,8 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 
 import org.json.JSONArray;
@@ -34,6 +36,8 @@ public class GameAnalyticsAPI {
 	private boolean doSend = false;
 	private String userId = null;
 	private String sessionId = UUID.randomUUID().toString();
+	
+	private ExecutorService threadPool = Executors.newFixedThreadPool(20, Executors.defaultThreadFactory());
 	
 	//constructor
 	public GameAnalyticsAPI(String gameKey, String secretKey, String version, String userId) {
@@ -121,7 +125,7 @@ public class GameAnalyticsAPI {
 			return;
 		}
 		
-		new Thread(new Runnable() {
+		threadPool.execute(new Runnable() {
 			public void run() {
 				if (!doSend) {
 					try {
@@ -204,10 +208,10 @@ public class GameAnalyticsAPI {
 					return;
 				}
 			}
-		}).start();
+		});
 	}
 	private void sendInit() {
-		new Thread(new Runnable() {
+		threadPool.execute(new Runnable() {
 			public void run() {
 				HttpURLConnection conn = null;
 				try {
@@ -288,7 +292,7 @@ public class GameAnalyticsAPI {
 					return;
 				}
 			}
-		}).start();
+		});
 	}
 	
 	private String getLevelString(Level level) {

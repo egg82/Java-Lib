@@ -2,6 +2,8 @@ package ninja.egg82.patterns;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.swing.Timer;
 
@@ -11,6 +13,8 @@ import ninja.egg82.patterns.events.EventHandler;
 
 public abstract class Command {
 	//vars
+	private static ExecutorService threadPool = Executors.newCachedThreadPool(Executors.defaultThreadFactory());
+	
 	private final EventHandler<CompleteEventArgs<?>> complete = new EventHandler<CompleteEventArgs<?>>();
 	private final EventHandler<ExceptionEventArgs<?>> error = new EventHandler<ExceptionEventArgs<?>>();
 	
@@ -38,11 +42,11 @@ public abstract class Command {
 			startTime = System.currentTimeMillis();
 			timer.start();
 		} else {
-			new Thread(new Runnable() {
+			threadPool.execute(new Runnable() {
 				public void run() {
 					onExecute(0L);
 				}
-			}).start();
+			});
 		}
 	}
 	

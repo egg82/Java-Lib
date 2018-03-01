@@ -320,7 +320,9 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	}
 	private void rewriteFilename(LogRecord record) {
 		Throwable ex = record.getThrown();
-		rewriteFilename(ex);
-		record.setThrown(ex);
+		if (ex != null) {
+			rewriteFilename(ex);
+			record.setThrown(ex);
+		}
 	}
 }
