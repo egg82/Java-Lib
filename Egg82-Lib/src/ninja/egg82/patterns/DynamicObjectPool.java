@@ -45,6 +45,14 @@ public final class DynamicObjectPool<T> implements IObjectPool<T> {
 		
 		return pool.add(e);
 	}
+	public boolean addFirst(T e) {
+		if (e == null) {
+			throw new ArgumentNullException("e");
+		}
+		
+		pool.addFirst(e);
+		return true;
+	}
 	public boolean addAll(Collection<? extends T> c) {
 		if (c == null) {
 			throw new ArgumentNullException("c");

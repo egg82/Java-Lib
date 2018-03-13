@@ -50,6 +50,17 @@ public final class FixedObjectPool<T> implements IObjectPool<T> {
 		
 		return pool.add(e);
 	}
+	public boolean addFirst(T e) {
+		if (e == null) {
+			throw new ArgumentNullException("e");
+		}
+		if (remainingCapacity() == 0) {
+			throw new IllegalStateException("Attempted to add element to full FixedObjectPool.");
+		}
+		
+		pool.addFirst(e);
+		return true;
+	}
 	public boolean addAll(Collection<? extends T> c) {
 		if (c == null) {
 			throw new ArgumentNullException("c");
