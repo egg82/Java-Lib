@@ -72,6 +72,13 @@ public class MySQL implements ISQL {
 	// A timer used for flushing the current query queue in case of thread failure
 	private Timer backlogTimer = null;
 	
+	// Thread pool for reconnect thread. The thread count for actually reconnecting should never exceed 1 because that would be silly
+	private ExecutorService reconnectThreadPool = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("egg82-MySQL-Reconnect-%d").build());
+	// A lock for the reconnect thread. Because checking thread null and then setting the thread the new value in a multithreaded environment will cause a few issues.
+	private Lock reconnectLock = new ReentrantLock();
+	// The actual reconnect thread, for cancellation purposes
+	private volatile Future<?> reconnectThread = null;
+	
 	// Connected state. Atomic because multithreading is HARD
 	private AtomicBoolean connected = new AtomicBoolean(false);
 	
@@ -81,6 +88,12 @@ public class MySQL implements ISQL {
 	private volatile static ClassLoader loader = ClassLoader.getSystemClassLoader();
 	// The jar (or in this case zip) file to download and use for dep injection in case we need it
 	private static final String MYSQL_JAR = "https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.45.zip";
+	
+	private String address = null;
+	private int port = 0;
+	private String user = null;
+	private String pass = null;
+	private String dbName = null;
 	
 	//constructor
 	public MySQL() {
@@ -154,15 +167,19 @@ public class MySQL implements ISQL {
 			throw new IllegalArgumentException("port cannot be <= 0 or > 65535");
 		}
 		
+		this.address = address;
+		this.port = port;
+		this.user = user;
+		this.pass = pass;
+		this.dbName = dbName;
+		
 		// Add connection properties
 		Properties props = new Properties();
 		props.put("user", user);
 		props.put("password", pass);
 		props.put("useUnicode", "true");
 		props.put("characterEncoding", "UTF-8");
-		props.put("autoReconnect", "true");
 		props.put("failOverReadOnly", "false");
-		props.put("maxReconnects", String.valueOf(Integer.MAX_VALUE));
 		
 		// Connect to the database
 		try {
@@ -201,6 +218,15 @@ public class MySQL implements ISQL {
 		}
 		backlog.clear();
 		sendLock.unlock();
+		
+		// Lock (sleep the thread and wait if needed) the reconnect thread
+		reconnectLock.lock();
+		if (reconnectThread != null) {
+			// This should never really be "not null" if the lock works, but hey. You never know.
+			reconnectThread.cancel(true);
+			reconnectThread = null;
+		}
+		reconnectLock.unlock();
 		
 		// Close the connection gracefully
 		try {
@@ -242,6 +268,13 @@ public class MySQL implements ISQL {
 					sendThread.cancel(false);
 				}
 				
+				// Check the reconnect thread status
+				if (!reconnectLock.tryLock()) {
+					sendLock.unlock();
+					return u;
+				}
+				reconnectLock.unlock();
+				
 				// Create a new send thread
 				sendThread = threadPool.submit(onSendThread);
 			}
@@ -281,6 +314,13 @@ public class MySQL implements ISQL {
 				if (sendThread != null) {
 					sendThread.cancel(false);
 				}
+				
+				// Check the reconnect thread status
+				if (!reconnectLock.tryLock()) {
+					sendLock.unlock();
+					return u;
+				}
+				reconnectLock.unlock();
 				
 				// Create a new send thread
 				sendThread = threadPool.submit(onSendThread);
@@ -324,6 +364,48 @@ public class MySQL implements ISQL {
 			sendNext();
 		}
 	};
+	private Runnable onReconnectThread = new Runnable() {
+		public void run() {
+			boolean good = true;
+			
+			do {
+				good = true;
+				
+				// Disconnect
+				try {
+					conn.close();
+				} catch (Exception ex2) {
+					
+				}
+				
+				// Add connection properties
+				Properties props = new Properties();
+				props.put("user", user);
+				props.put("password", pass);
+				props.put("useUnicode", "true");
+				props.put("characterEncoding", "UTF-8");
+				props.put("failOverReadOnly", "false");
+				
+				// Reconnect
+				try {
+					conn = (Connection) m.invoke(null, "jdbc:mysql://" + address + ":" + port + "/" + dbName, props, Class.forName("com.mysql.jdbc.Driver", true, loader));
+				} catch (Exception ex2) {
+					good = false;
+				}
+				
+				if (!good) {
+					try {
+						Thread.sleep(3000L);
+					} catch (Exception ex) {
+						
+					}
+				}
+			} while (!good);
+			
+			reconnectThread = null;
+			reconnectLock.unlock();
+		}
+	};
 	private ActionListener onBacklogTimer = new ActionListener() {
 		public void actionPerformed(ActionEvent e) {
 			// Check connection state
@@ -344,6 +426,13 @@ public class MySQL implements ISQL {
 					sendLock.unlock();
 					return;
 				}
+				
+				// Check the reconnect thread status
+				if (!reconnectLock.tryLock()) {
+					sendLock.unlock();
+					return;
+				}
+				reconnectLock.unlock();
 				
 				// Create a new send thread
 				sendThread = threadPool.submit(onSendThread);
@@ -449,10 +538,48 @@ public class MySQL implements ISQL {
 		try {
 			command.execute();
 		} catch (Exception ex) {
-			// Errored on execution, invoke the error method and try sending the next item in the queue
-			error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
-			sendNext();
-			return;
+			if (ex.getClass().getSimpleName().equals("CommunicationsException")) {
+				// Check connection state
+				if (!connected.get()) {
+					backlogTimer.stop();
+					return;
+				}
+				
+				// Grab a new data object if we can. Pop the last instead of the first so we don't need to re-order the entire array
+				SQLQueueData queryData = queueDataPool.popLast();
+				
+				if (queryData == null) {
+					// We ran out of queue space. We'll create one
+					queryData = new SQLQueueData();
+				}
+				
+				// Set the new data and add it to the send queue
+				queryData.setQuery(q);
+				queryData.setNamedParams(namedParameters);
+				queryData.setUnnamedParams(parameters);
+				queryData.setUuid(u);
+				backlog.add(queryData);
+				
+				// Lock the reconnect thread (wait if needed)
+				reconnectLock.lock();
+				// Cancel thread if it's running (wait for complete)
+				if (reconnectThread != null) {
+					reconnectThread.cancel(false);
+				}
+				
+				// Create a new reconnect thread
+				reconnectThread = reconnectThreadPool.submit(onReconnectThread);
+				
+				// Clean up the send thread and return
+				sendThread = null;
+				sendLock.unlock();
+				return;
+			} else {
+				// Errored on execution, invoke the error method and try sending the next item in the queue
+				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				sendNext();
+				return;
+			}
 		}
 		
 		// Create the return data object
