@@ -9,6 +9,7 @@ public class SQLQueueData {
 	private volatile Map<String, Object> namedParams = null;
 	private volatile Object[] unnamedParams = null;
 	private volatile UUID uuid = null;
+	private volatile boolean parallel = false;
 	
 	//constructor
 	public SQLQueueData() {
@@ -44,11 +45,19 @@ public class SQLQueueData {
 		this.uuid = uuid;
 	}
 	
+	public boolean getParallel() {
+		return parallel;
+	}
+	public void setParallel(boolean parallel) {
+		this.parallel = parallel;
+	}
+	
 	public void clear() {
 		this.query = null;
 		this.namedParams = null;
 		this.unnamedParams = null;
 		this.uuid = null;
+		this.parallel = false;
 	}
 	
 	//private

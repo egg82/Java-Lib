@@ -22,7 +22,7 @@ import java.util.UUID;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -40,6 +40,7 @@ import ninja.egg82.core.SQLQueueData;
 import ninja.egg82.enums.SQLType;
 import ninja.egg82.events.SQLEventArgs;
 import ninja.egg82.patterns.DynamicObjectPool;
+import ninja.egg82.patterns.FixedObjectPool;
 import ninja.egg82.patterns.IObjectPool;
 import ninja.egg82.patterns.events.EventArgs;
 import ninja.egg82.patterns.events.EventHandler;
@@ -54,20 +55,20 @@ public class SQLite implements ISQL {
 	private final EventHandler<SQLEventArgs> data = new EventHandler<SQLEventArgs>();
 	private final EventHandler<SQLEventArgs> error = new EventHandler<SQLEventArgs>();
 	
-	// DB connection
-	private Connection conn = null;
+	// free DB connection pool, where connections are taken from
+	private IObjectPool<Connection> freeConnections = null;
+	// used DB connection pool, where connections are added while in use
+	private IObjectPool<Connection> usedConnections = new DynamicObjectPool<Connection>();
 	
 	// Query backlog/queue - for queuing queries and ensuring data consistency
 	private IObjectPool<SQLQueueData> backlog = new DynamicObjectPool<SQLQueueData>();
 	// Object pool for storing "dead" query data - so we don't re-create a new data object for every query
 	private IObjectPool<SQLQueueData> queueDataPool = new DynamicObjectPool<SQLQueueData>();
 	
-	// Thread pool for query thread. The thread count for actually sending queries should never exceed 1 for data consistency
-	private ExecutorService threadPool = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("egg82-SQLite-%d").build());
-	// A lock for the send thread. Because checking thread null and then setting the thread the new value in a multithreaded environment will cause a few issues.
-	private Lock sendLock = new ReentrantLock();
-	// The actual query thread, for cancellation purposes
-	private volatile Future<?> sendThread = null;
+	// Thread pool for query thread. The thread count is to be determined by the consuctor
+	private ExecutorService threadPool = null;
+	// A lock that, when locked, tells the current send threads to wait for the current blocking query to finish
+	private Lock parallelLock = new ReentrantLock();
 	// A timer used for flushing the current query queue in case of thread failure
 	private Timer backlogTimer = null;
 	
@@ -81,11 +82,18 @@ public class SQLite implements ISQL {
 	// The jar file to download and use for dep injection in case we need it
 	private static final String SQLITE_JAR = "https://bitbucket.org/xerial/sqlite-jdbc/downloads/sqlite-jdbc-3.21.0.jar";
 	
+	private String filePath = null;
+	
 	//constructor
-	public SQLite() {
-		this(null);
+	public SQLite(int numConnections) {
+		this(numConnections, null);
 	}
-	public SQLite(ClassLoader customLoader) {
+	public SQLite(int numConnections, ClassLoader customLoader) {
+		if (numConnections < 2) {
+			numConnections = 2;
+		}
+		freeConnections = new FixedObjectPool<Connection>(numConnections);
+		
 		// Check to see if SQLite is loaded
 		if (m == null || loader == null) {
 			boolean good = false;
@@ -153,6 +161,8 @@ public class SQLite implements ISQL {
 			throw new IllegalArgumentException("filePath cannot be null or empty.");
 		}
 		
+		this.filePath = filePath;
+		
 		// Create the directory and file structure, if needed
 		if (!FileUtil.pathExists(filePath)) {
 			try {
@@ -167,11 +177,16 @@ public class SQLite implements ISQL {
 		}
 		
 		// Connect to the database
-		try {
-			conn = (Connection) m.invoke(null, "jdbc:sqlite:" + filePath, new Properties(), Class.forName("org.sqlite.JDBC", true, loader));
-		} catch (Exception ex) {
-			throw new RuntimeException("Could not connect to database.", ex);
+		while (freeConnections.remainingCapacity() > 0) {
+			try {
+				freeConnections.add((Connection) m.invoke(null, "jdbc:sqlite:" + filePath, new Properties(), Class.forName("org.sqlite.JDBC", true, loader)));
+			} catch (Exception ex) {
+				throw new RuntimeException("Could not connect to database.", ex);
+			}
 		}
+		
+		// Create the thread pool. Why here instead of the constructor? Because we call shutdown() on this pool in disconnect
+		threadPool = Executors.newFixedThreadPool(freeConnections.size(), new ThreadFactoryBuilder().setNameFormat("egg82-SQlite-%d").build());
 		
 		// Start the flush timer and set the connected state
 		backlogTimer.start();
@@ -188,27 +203,90 @@ public class SQLite implements ISQL {
 		// Stop the flush timer
 		backlogTimer.stop();
 		
-		// Lock (sleep the thread and wait if needed) the send thread
-		sendLock.lock();
-		if (sendThread != null) {
-			// This should never really be "not null" if the lock works, but hey. You never know.
-			sendThread.cancel(true);
-			sendThread = null;
+		// Shutdown the send threads gracefully, then not-so-gracefully after 15 seconds
+		try {
+			threadPool.shutdown();
+			if (!threadPool.awaitTermination(15000L, TimeUnit.MILLISECONDS)) {
+				threadPool.shutdownNow();
+			}
+		} catch (Exception ex) {
+			
 		}
 		backlog.clear();
-		sendLock.unlock();
 		
-		// Close the connection gracefully
-		try {
-			conn.close();
-		} catch (Exception ex) {
-			// If this exception is ever raised something is really fucked. We'll ignore it.
+		// Kill connections in use (hopefully zero)
+		while (!usedConnections.isEmpty()) {
+			Connection conn = usedConnections.popLast();
+			
+			if (conn != null) {
+				// Close the connection gracefully
+				try {
+					conn.close();
+				} catch (Exception ex) {
+					// If this exception is ever raised something is really fucked. We'll ignore it.
+				}
+			} else {
+				break;
+			}
+		}
+		// Kill connections not in use
+		while (!freeConnections.isEmpty()) {
+			Connection conn = freeConnections.popLast();
+			
+			if (conn != null) {
+				// Close the connection gracefully
+				try {
+					conn.close();
+				} catch (Exception ex) {
+					// If this exception is ever raised something is really fucked. We'll ignore it.
+				}
+			} else {
+				break;
+			}
 		}
 		
 		disconnect.invoke(this, EventArgs.EMPTY);
 	}
 	
 	public UUID query(String q, Object... queryParams) {
+		return query(q, false, queryParams);
+	}
+	public UUID parallelQuery(String q, Object... queryParams) {
+		return query(q, true, queryParams);
+	}
+	public UUID query(String q, Map<String, Object> namedQueryParams) {
+		return query(q, false, namedQueryParams);
+	}
+	public UUID parallelQuery(String q, Map<String, Object> namedQueryParams) {
+		return query(q, true, namedQueryParams);
+	}
+	
+	public boolean isConnected() {
+		return connected.get();
+	}
+	public boolean isBusy() {
+		return (usedConnections.size() > 0) ? true : false;
+	}
+	
+	public EventHandler<EventArgs> onConnect() {
+		return connect;
+	}
+	public EventHandler<EventArgs> onDisconnect() {
+		return disconnect;
+	}
+	public EventHandler<SQLEventArgs> onData() {
+		return data;
+	}
+	public EventHandler<SQLEventArgs> onError() {
+		return error;
+	}
+	
+	public SQLType getType() {
+		return SQLType.SQLite;
+	}
+	
+	//private
+	private UUID query(String q, boolean parallel, Object... queryParams) {
 		if (q == null || q.isEmpty()) {
 			throw new IllegalArgumentException("q cannot be null or empty.");
 		}
@@ -227,25 +305,18 @@ public class SQLite implements ISQL {
 		queryData.setQuery(q);
 		queryData.setUnnamedParams(queryParams);
 		queryData.setUuid(u);
+		queryData.setParallel(parallel);
 		backlog.add(queryData);
 		
 		// Are we connected?
 		if (connected.get()) {
-			// Try to create a new send thread if one doesn't exist
-			if (sendLock.tryLock()) {
-				// Cancel thread if it's running (wait for complete)
-				if (sendThread != null) {
-					sendThread.cancel(false);
-				}
-				
-				// Create a new send thread
-				sendThread = threadPool.submit(onSendThread);
-			}
+			// Add a new query task
+			threadPool.submit(onSendThread);
 		}
 		
 		return u;
 	}
-	public UUID query(String q, Map<String, Object> namedQueryParams) {
+	private UUID query(String q, boolean parallel, Map<String, Object> namedQueryParams) {
 		if (q == null || q.isEmpty()) {
 			throw new IllegalArgumentException("q cannot be null or empty.");
 		}
@@ -267,57 +338,31 @@ public class SQLite implements ISQL {
 		queryData.setQuery(q);
 		queryData.setNamedParams(namedQueryParams);
 		queryData.setUuid(u);
+		queryData.setParallel(parallel);
 		backlog.add(queryData);
 		
 		// Are we connected?
 		if (connected.get()) {
-			// Try to create a new send thread if one doesn't exist
-			if (sendLock.tryLock()) {
-				// Cancel thread if it's running (wait for complete)
-				if (sendThread != null) {
-					sendThread.cancel(false);
-				}
-				
-				// Create a new send thread
-				sendThread = threadPool.submit(onSendThread);
-			}
+			// Add a new query task
+			threadPool.submit(onSendThread);
 		}
 		
 		return u;
 	}
 	
-	public boolean isConnected() {
-		return connected.get();
-	}
-	public boolean isBusy() {
-		return (sendThread == null) ? false : true;
-	}
-	public boolean isExternal() {
-		return false;
-	}
-	
-	public EventHandler<EventArgs> onConnect() {
-		return connect;
-	}
-	public EventHandler<EventArgs> onDisconnect() {
-		return disconnect;
-	}
-	public EventHandler<SQLEventArgs> onData() {
-		return data;
-	}
-	public EventHandler<SQLEventArgs> onError() {
-		return error;
-	}
-	
-	public SQLType getType() {
-		return SQLType.SQLite;
-	}
-	
-	//private
 	private Runnable onSendThread = new Runnable() {
 		public void run() {
+			// Grab a new connection from the free pool. We grab the first to ensure rotation
+			Connection conn = freeConnections.popFirst();
+			if (conn == null) {
+				// No free connections left
+				parallelLock.unlock();
+				return;
+			}
+			usedConnections.add(conn);
+			
 			// Send the next data in the queue, if available
-			sendNext();
+			sendNext(conn);
 		}
 	};
 	private ActionListener onBacklogTimer = new ActionListener() {
@@ -328,30 +373,28 @@ public class SQLite implements ISQL {
 				return;
 			}
 			
-			// Check the send thread lock
-			if (sendLock.tryLock()) {
-				// Cancel thread if it's running (wait for complete)
-				if (sendThread != null) {
-					sendThread.cancel(false);
-				}
-				
-				// Check backlog count
-				if (backlog.isEmpty()) {
-					sendLock.unlock();
-					return;
-				}
-				
-				// Create a new send thread
-				sendThread = threadPool.submit(onSendThread);
+			// Check backlog count
+			if (backlog.isEmpty()) {
+				return;
 			}
+			
+			// Create a new send thread
+			threadPool.submit(onSendThread);
 		}
 	};
 	
-	private void sendNext() {
+	private void sendNext(Connection conn) {
 		if (!connected.get()) {
 			// We're no longer connected
-			sendThread = null;
-			sendLock.unlock();
+			usedConnections.remove(conn);
+			freeConnections.add(conn);
+			return;
+		}
+		
+		// Try to take the parallel lock
+		if (!parallelLock.tryLock()) {
+			usedConnections.remove(conn);
+			freeConnections.add(conn);
 			return;
 		}
 		
@@ -359,97 +402,152 @@ public class SQLite implements ISQL {
 		SQLQueueData first = backlog.popFirst();
 		if (first == null) {
 			// Data is null, which means we reached the end of the queue
-			sendThread = null;
-			sendLock.unlock();
+			usedConnections.remove(conn);
+			freeConnections.add(conn);
+			parallelLock.unlock();
 			return;
+		}
+		
+		if (first.getParallel()) {
+			// Parallel connection. Release the parallel lock
+			parallelLock.unlock();
 		}
 		
 		// See what type of parameters we're using (named or unnamed) and send the query off
 		if (first.getNamedParams() != null) {
-			queryInternal(first.getQuery(), first.getNamedParams(), first.getUuid());
+			// The prepared statement to use
+			NamedParameterStatement command = null;
+			
+			// Try to create the statement
+			try {
+				command = new NamedParameterStatement(conn, first.getQuery());
+			} catch (Exception ex) {
+				// Errored on creating the query, invoke the error method and try sending the next item in the queue
+				error.invoke(this, new SQLEventArgs(first.getQuery(), null, first.getNamedParams(), new SQLError(ex), new SQLData(), first.getUuid()));
+				sendNext(conn);
+				return;
+			}
+			
+			// Is this a parameterized query?
+			if (first.getNamedParams() != null && first.getNamedParams().size() > 0) {
+				try {
+					// Loop the parameters and set them in the statement
+					for (Entry<String, Object> kvp : first.getNamedParams().entrySet()) {
+						command.setObject(kvp.getKey(), kvp.getValue());
+					}
+				} catch (Exception ex) {
+					// Couldn't add parameters, invoke the error method and try sending the next item in the queue
+					error.invoke(this, new SQLEventArgs(first.getQuery(), null, first.getNamedParams(), new SQLError(ex), new SQLData(), first.getUuid()));
+					sendNext(conn);
+					return;
+				}
+			}
+			
+			boolean parallel = first.getParallel();
+			String query = first.getQuery();
+			Map<String, Object> namedParams = first.getNamedParams();
+			UUID uuid = first.getUuid();
+			
+			// Clear the container object and add it back to the data pool
+			first.clear();
+			queueDataPool.add(first);
+			
+			// Execute the new statement
+			execute(conn, command.getPreparedStatement(), parallel, query, null, namedParams, uuid);
 		} else {
-			queryInternal(first.getQuery(), first.getUnnamedParams(), first.getUuid());
-		}
-		
-		// Clear the container object and add it back to the data pool
-		first.clear();
-		queueDataPool.add(first);
-	}
-	
-	private void queryInternal(String q, Object[] parameters, UUID u) {
-		// The prepared statement to use
-		PreparedStatement command = null;
-		
-		// Try to create the statement
-		try {
-			command = conn.prepareStatement(q);
-		} catch (Exception ex) {
-			// Errored on creating the query, invoke the error method and try sending the next item in the queue
-			error.invoke(this, new SQLEventArgs(q, parameters, null, new SQLError(ex), new SQLData(), u));
-			sendNext();
-			return;
-		}
-		
-		// Is this a parameterized query?
-		if (parameters != null && parameters.length > 0) {
+			// The prepared statement to use
+			PreparedStatement command = null;
+			
+			// Try to create the statement
 			try {
-				// Loop the parameters and set them in the statement
-				for (int i = 0; i < parameters.length; i++) {
-					command.setObject(i + 1, parameters[i]);
-				}
+				command = conn.prepareStatement(first.getQuery());
 			} catch (Exception ex) {
-				// Couldn't add parameters, invoke the error method and try sending the next item in the queue
-				error.invoke(this, new SQLEventArgs(q, parameters, null, new SQLError(ex), new SQLData(), u));
-				sendNext();
+				// Errored on creating the query, invoke the error method and try sending the next item in the queue
+				error.invoke(this, new SQLEventArgs(first.getQuery(), first.getUnnamedParams(), null, new SQLError(ex), new SQLData(), first.getUuid()));
+				sendNext(conn);
 				return;
 			}
-		}
-		
-		// Execute the new statement
-		execute(command, q, parameters, null, u);
-	}
-	private void queryInternal(String q, Map<String, Object> parameters, UUID u) {
-		// The prepared statement to use
-		NamedParameterStatement command = null;
-		
-		// Try to create the statement
-		try {
-			command = new NamedParameterStatement(conn, q);
-		} catch (Exception ex) {
-			// Errored on creating the query, invoke the error method and try sending the next item in the queue
-			error.invoke(this, new SQLEventArgs(q, null, parameters, new SQLError(ex), new SQLData(), u));
-			sendNext();
-			return;
-		}
-		
-		// Is this a parameterized query?
-		if (parameters != null && parameters.size() > 0) {
-			try {
-				// Loop the parameters and set them in the statement
-				for (Entry<String, Object> kvp : parameters.entrySet()) {
-					command.setObject(kvp.getKey(), kvp.getValue());
+			
+			// Is this a parameterized query?
+			if (first.getUnnamedParams() != null && first.getUnnamedParams().length > 0) {
+				try {
+					// Loop the parameters and set them in the statement
+					for (int i = 0; i < first.getUnnamedParams().length; i++) {
+						command.setObject(i + 1, first.getUnnamedParams()[i]);
+					}
+				} catch (Exception ex) {
+					// Couldn't add parameters, invoke the error method and try sending the next item in the queue
+					error.invoke(this, new SQLEventArgs(first.getQuery(), first.getUnnamedParams(), null, new SQLError(ex), new SQLData(), first.getUuid()));
+					sendNext(conn);
+					return;
 				}
-			} catch (Exception ex) {
-				// Couldn't add parameters, invoke the error method and try sending the next item in the queue
-				error.invoke(this, new SQLEventArgs(q, null, parameters, new SQLError(ex), new SQLData(), u));
-				sendNext();
-				return;
 			}
+			
+			// Grab the data BEFORE we clear the container
+			boolean parallel = first.getParallel();
+			String query = first.getQuery();
+			Object[] params = first.getUnnamedParams();
+			UUID uuid = first.getUuid();
+			
+			// Clear the container object and add it back to the data pool
+			first.clear();
+			queueDataPool.add(first);
+			
+			// Execute the new statement
+			execute(conn, command, parallel, query, params, null, uuid);
 		}
-		
-		// Execute the new statement
-		execute(command.getPreparedStatement(), q, null, parameters, u);
 	}
 	
-	private void execute(PreparedStatement command, String q, Object[] parameters, Map<String, Object> namedParameters, UUID u) {
+	private void execute(Connection conn, PreparedStatement command, boolean isParallel, String q, Object[] parameters, Map<String, Object> namedParameters, UUID u) {
 		// Try to execute the statement
 		try {
 			command.execute();
 		} catch (Exception ex) {
-			// Errored on execution, invoke the error method and try sending the next item in the queue
-			error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
-			sendNext();
-			return;
+			if (ex.getClass().getSimpleName().equals("CommunicationsException")) {
+				// Check connection state
+				if (!connected.get()) {
+					backlogTimer.stop();
+					return;
+				}
+				
+				// Grab a new data object if we can. Pop the last instead of the first so we don't need to re-order the entire array
+				SQLQueueData queryData = queueDataPool.popLast();
+				
+				if (queryData == null) {
+					// We ran out of queue space. We'll create one
+					queryData = new SQLQueueData();
+				}
+				
+				// Set the new data and add it to the beginning of the send queue (preserving order)
+				queryData.setQuery(q);
+				queryData.setUnnamedParams(parameters);
+				queryData.setNamedParams(namedParameters);
+				queryData.setUuid(u);
+				queryData.setParallel(isParallel);
+				backlog.addFirst(queryData);
+				
+				// Unlock the parallel lock if it's currently locked, BEFORE we create a new send thread
+				if (!isParallel) {
+					parallelLock.unlock();
+				}
+				
+				// Create a new send thread
+				threadPool.submit(onSendThread);
+				
+				// Reconnect on this thread
+				usedConnections.remove(conn);
+				conn = reconnect(conn);
+				freeConnections.add(conn);
+				return;
+			} else {
+				// Errored on execution, invoke the error method and try sending the next item in the queue
+				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				if (!isParallel) {
+					parallelLock.unlock();
+				}
+				sendNext(conn);
+				return;
+			}
 		}
 		
 		// Create the return data object
@@ -461,7 +559,10 @@ public class SQLite implements ISQL {
 		} catch (Exception ex) {
 			// Errored, invoke the error method and try sending the next item in the queue
 			error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
-			sendNext();
+			if (!isParallel) {
+				parallelLock.unlock();
+			}
+			sendNext(conn);
 			return;
 		}
 		
@@ -474,7 +575,10 @@ public class SQLite implements ISQL {
 		} catch (Exception ex) {
 			// Errored, invoke the error method and try sending the next item in the queue
 			error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
-			sendNext();
+			if (!isParallel) {
+				parallelLock.unlock();
+			}
+			sendNext(conn);
 			return;
 		}
 		
@@ -489,7 +593,10 @@ public class SQLite implements ISQL {
 			} catch (Exception ex) {
 				// Errored, invoke the error method and try sending the next item in the queue
 				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
-				sendNext();
+				if (!isParallel) {
+					parallelLock.unlock();
+				}
+				sendNext(conn);
 				return;
 			}
 			
@@ -504,7 +611,10 @@ public class SQLite implements ISQL {
 			} catch (Exception ex) {
 				// Errored, invoke the error method and try sending the next item in the queue
 				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
-				sendNext();
+				if (!isParallel) {
+					parallelLock.unlock();
+				}
+				sendNext(conn);
 				return;
 			}
 			d.columns = tColumns.toArray(new String[0]);
@@ -528,7 +638,10 @@ public class SQLite implements ISQL {
 			} catch (Exception ex) {
 				// Errored, invoke the error method and try sending the next item in the queue
 				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
-				sendNext();
+				if (!isParallel) {
+					parallelLock.unlock();
+				}
+				sendNext(conn);
 				return;
 			}
 			
@@ -549,7 +662,10 @@ public class SQLite implements ISQL {
 			} catch (Exception ex) {
 				// Errored, invoke the error method and try sending the next item in the queue
 				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
-				sendNext();
+				if (!isParallel) {
+					parallelLock.unlock();
+				}
+				sendNext(conn);
 				return;
 			}
 			
@@ -563,15 +679,52 @@ public class SQLite implements ISQL {
 			
 			// Invoke the data event and try sending the next item in the queue
 			data.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(), d, u));
-			sendNext();
+			if (!isParallel) {
+				parallelLock.unlock();
+			}
+			sendNext(conn);
 		} else {
 			// Set dummy data in the return data object so nobody hits an unexpected null value
 			d.columns = new String[0];
 			d.data = new Object[0][];
 			// Invoke the data event and try sending the next item in the queue
 			data.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(), d, u));
-			sendNext();
+			if (!isParallel) {
+				parallelLock.unlock();
+			}
+			sendNext(conn);
 		}
+	}
+	
+	private Connection reconnect(Connection conn) {
+		// Disconnect
+		try {
+			conn.close();
+		} catch (Exception ex2) {
+			
+		}
+		
+		boolean good = true;
+		do {
+			good = true;
+			
+			// Reconnect
+			try {
+				conn = (Connection) m.invoke(null, "jdbc:sqlite:" + filePath, new Properties(), Class.forName("org.sqlite.JDBC", true, loader));
+			} catch (Exception ex2) {
+				good = false;
+			}
+			
+			if (!good) {
+				try {
+					Thread.sleep(1000L);
+				} catch (Exception ex) {
+					
+				}
+			}
+		} while (!good);
+		
+		return conn;
 	}
 	
 	private static File getSQLiteFile() {

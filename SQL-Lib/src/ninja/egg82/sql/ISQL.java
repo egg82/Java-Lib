@@ -17,11 +17,12 @@ public interface ISQL {
 	void disconnect();
 	
 	UUID query(String q, Object... queryParams);
+	UUID parallelQuery(String q, Object... queryParams);
 	UUID query(String q, Map<String, Object> namedQueryParams);
+	UUID parallelQuery(String q, Map<String, Object> namedQueryParams);
 	
 	boolean isConnected();
 	boolean isBusy();
-	boolean isExternal();
 	
 	EventHandler<EventArgs> onConnect();
 	EventHandler<EventArgs> onDisconnect();
