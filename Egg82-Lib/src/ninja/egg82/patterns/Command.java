@@ -1,11 +1,10 @@
 package ninja.egg82.patterns;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
-import javax.swing.Timer;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import ninja.egg82.events.CompleteEventArgs;
 import ninja.egg82.events.ExceptionEventArgs;
@@ -13,13 +12,13 @@ import ninja.egg82.patterns.events.EventHandler;
 
 public abstract class Command {
 	//vars
-	private static ExecutorService threadPool = Executors.newCachedThreadPool(Executors.defaultThreadFactory());
+	private static ScheduledExecutorService threadPool = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors(), new ThreadFactoryBuilder().setNameFormat("egg82-Command-%d").build());
 	
 	private final EventHandler<CompleteEventArgs<?>> complete = new EventHandler<CompleteEventArgs<?>>();
 	private final EventHandler<ExceptionEventArgs<?>> error = new EventHandler<ExceptionEventArgs<?>>();
 	
-	private Timer timer = null;
 	private long startTime = 0L;
+	private long delay = 0L;
 	
 	//constructor
 	public Command() {
@@ -31,22 +30,25 @@ public abstract class Command {
 		} else if (delay == 0) {
 			return;
 		} else {
-			timer = new Timer(delay, onTimer);
-			timer.setRepeats(false);
+			this.delay = delay;
 		}
 	}
 	
 	//public
 	public final void start() {
-		if (timer != null) {
-			startTime = System.currentTimeMillis();
-			timer.start();
-		} else {
+		startTime = System.currentTimeMillis();
+		if (delay == 0L) {
 			threadPool.execute(new Runnable() {
 				public void run() {
-					onExecute(0L);
+					onExecute(System.currentTimeMillis() - startTime);
 				}
 			});
+		} else {
+			threadPool.schedule(new Runnable() {
+				public void run() {
+					onExecute(System.currentTimeMillis() - startTime);
+				}
+			}, delay, TimeUnit.MILLISECONDS);
 		}
 	}
 	
@@ -59,10 +61,4 @@ public abstract class Command {
 	
 	//private
 	protected abstract void onExecute(long elapsedMilliseconds);
-	
-	private ActionListener onTimer = new ActionListener() {
-		public void actionPerformed(ActionEvent e) {
-			onExecute(System.currentTimeMillis() - startTime);
-		}
-	};
 }

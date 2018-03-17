@@ -503,7 +503,7 @@ public class SQLite implements ISQL {
 		try {
 			command.execute();
 		} catch (Exception ex) {
-			if (ex.getClass().getSimpleName().equals("CommunicationsException")) {
+			if (ex.getClass().getSimpleName().equals("CommunicationsException") || ex.getClass().getSimpleName().equals("EOFException") || contains("CommunicationsException", ex.getCause())) {
 				// Check connection state
 				if (!connected.get()) {
 					backlogTimer.stop();
@@ -725,6 +725,16 @@ public class SQLite implements ISQL {
 		} while (!good);
 		
 		return conn;
+	}
+	
+	private static boolean contains(String needle, Throwable cause) {
+		if (cause == null) {
+			return false;
+		}
+		if (cause.getClass().getSimpleName().equals(needle)) {
+			return true;
+		}
+		return contains(needle, cause.getCause());
 	}
 	
 	private static File getSQLiteFile() {
