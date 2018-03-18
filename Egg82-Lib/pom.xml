@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>egg82-lib</artifactId>
-  <version>2.7.37</version>
+  <version>2.7.38</version>
   <name>egg82-lib</name>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -41,32 +41,6 @@
                 </filter>
               </filters>
               <minimizeJar>true</minimizeJar>
-              <relocations>
-                <relocation>
-                  <pattern>com.google</pattern>
-                  <shadedPattern>ninja.egg82.lib.com.google</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>org.json</pattern>
-                  <shadedPattern>ninja.egg82.lib.org.json</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>org.apache</pattern>
-                  <shadedPattern>ninja.egg82.lib.org.apache</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>org.reflections</pattern>
-                  <shadedPattern>ninja.egg82.lib.org.reflections</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>javassist</pattern>
-                  <shadedPattern>ninja.egg82.lib.javassist</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>net.jodah</pattern>
-                  <shadedPattern>ninja.egg82.lib.net.jodah</shadedPattern>
-                </relocation>
-              </relocations>
             </configuration>
           </execution>
         </executions>
@@ -105,8 +79,12 @@
 	  <groupId>org.slf4j</groupId>
 	  <artifactId>slf4j-api</artifactId>
 	  <version>1.7.25</version>
-	  <scope>provided</scope>
 	</dependency>
+	<dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>1.7.25</version>
+    </dependency>
     <dependency>
       <groupId>net.jodah</groupId>
       <artifactId>expiringmap</artifactId>
