@@ -1,7 +1,5 @@
 package ninja.egg82.sql;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -18,8 +16,8 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
@@ -27,8 +25,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-
-import javax.swing.Timer;
 
 import org.apache.commons.lang.NotImplementedException;
 
@@ -66,12 +62,10 @@ public class MySQL implements ISQL {
 	// Object pool for storing "dead" query data - so we don't re-create a new data object for every query
 	private IObjectPool<SQLQueueData> queueDataPool = new DynamicObjectPool<SQLQueueData>();
 	
-	// Thread pool for query thread. The thread count is to be determined by the consuctor
-	private ExecutorService threadPool = null;
+	// Thread pool for query threads. The thread count is to be determined by the constructor
+	private ScheduledExecutorService threadPool = null;
 	// A lock that, when locked, tells the current send threads to wait for the current blocking query to finish
 	private Lock parallelLock = new ReentrantLock();
-	// A timer used for flushing the current query queue in case of thread failure
-	private Timer backlogTimer = null;
 	
 	// Connected state. Atomic because multithreading is HARD
 	private AtomicBoolean connected = new AtomicBoolean(false);
@@ -144,10 +138,6 @@ public class MySQL implements ISQL {
 				}
 			}
 		}
-		
-		// Set up the flush timer
-		backlogTimer = new Timer(250, onBacklogTimer);
-		backlogTimer.setRepeats(true);
 	}
 	public void finalize() {
 		// Shutdown with garbage collection. This should never really happen, but hey.
@@ -190,10 +180,10 @@ public class MySQL implements ISQL {
 		}
 		
 		// Create the thread pool. Why here instead of the constructor? Because we call shutdown() on this pool in disconnect
-		threadPool = Executors.newFixedThreadPool(freeConnections.size(), new ThreadFactoryBuilder().setNameFormat("egg82-MySQL-%d").build());
+		threadPool = Executors.newScheduledThreadPool(freeConnections.size(), new ThreadFactoryBuilder().setNameFormat("egg82-MySQL-%d").build());
 		
 		// Start the flush timer and set the connected state
-		backlogTimer.start();
+		threadPool.scheduleAtFixedRate(onBacklogThread, 250L, 250L, TimeUnit.MILLISECONDS);
 		connected.set(true);
 		connect.invoke(this, EventArgs.EMPTY);
 	}
@@ -209,9 +199,6 @@ public class MySQL implements ISQL {
 		if (!connected.getAndSet(false)) {
 			return;
 		}
-		
-		// Stop the flush timer
-		backlogTimer.stop();
 		
 		// Shutdown the send threads gracefully, then not-so-gracefully after 15 seconds
 		try {
@@ -366,7 +353,6 @@ public class MySQL implements ISQL {
 			Connection conn = freeConnections.popFirst();
 			if (conn == null) {
 				// No free connections left
-				parallelLock.unlock();
 				return;
 			}
 			usedConnections.add(conn);
@@ -375,21 +361,23 @@ public class MySQL implements ISQL {
 			sendNext(conn);
 		}
 	};
-	private ActionListener onBacklogTimer = new ActionListener() {
-		public void actionPerformed(ActionEvent e) {
-			// Check connection state
-			if (!connected.get()) {
-				backlogTimer.stop();
+	private Runnable onBacklogThread = new Runnable() {
+		public void run() {
+			// Check connection state and backlog count
+			if (!connected.get() || backlog.isEmpty()) {
 				return;
 			}
 			
-			// Check backlog count
-			if (backlog.isEmpty()) {
+			// Grab a new connection from the free pool. We grab the first to ensure rotation
+			Connection conn = freeConnections.popFirst();
+			if (conn == null) {
+				// No free connections left
 				return;
 			}
+			usedConnections.add(conn);
 			
-			// Create a new send thread
-			threadPool.submit(onSendThread);
+			// Send the next data in the queue, if available
+			sendNext(conn);
 		}
 	};
 	
@@ -434,6 +422,9 @@ public class MySQL implements ISQL {
 			} catch (Exception ex) {
 				// Errored on creating the query, invoke the error method and try sending the next item in the queue
 				error.invoke(this, new SQLEventArgs(first.getQuery(), null, first.getNamedParams(), new SQLError(ex), new SQLData(), first.getUuid()));
+				if (first.getParallel()) {
+					parallelLock.unlock();
+				}
 				sendNext(conn);
 				return;
 			}
@@ -448,6 +439,9 @@ public class MySQL implements ISQL {
 				} catch (Exception ex) {
 					// Couldn't add parameters, invoke the error method and try sending the next item in the queue
 					error.invoke(this, new SQLEventArgs(first.getQuery(), null, first.getNamedParams(), new SQLError(ex), new SQLData(), first.getUuid()));
+					if (first.getParallel()) {
+						parallelLock.unlock();
+					}
 					sendNext(conn);
 					return;
 				}
@@ -474,6 +468,9 @@ public class MySQL implements ISQL {
 			} catch (Exception ex) {
 				// Errored on creating the query, invoke the error method and try sending the next item in the queue
 				error.invoke(this, new SQLEventArgs(first.getQuery(), first.getUnnamedParams(), null, new SQLError(ex), new SQLData(), first.getUuid()));
+				if (first.getParallel()) {
+					parallelLock.unlock();
+				}
 				sendNext(conn);
 				return;
 			}
@@ -488,6 +485,9 @@ public class MySQL implements ISQL {
 				} catch (Exception ex) {
 					// Couldn't add parameters, invoke the error method and try sending the next item in the queue
 					error.invoke(this, new SQLEventArgs(first.getQuery(), first.getUnnamedParams(), null, new SQLError(ex), new SQLData(), first.getUuid()));
+					if (first.getParallel()) {
+						parallelLock.unlock();
+					}
 					sendNext(conn);
 					return;
 				}
@@ -516,7 +516,6 @@ public class MySQL implements ISQL {
 			if (ex.getClass().getSimpleName().equals("CommunicationsException") || ex.getClass().getSimpleName().equals("EOFException") || contains("CommunicationsException", ex.getCause())) {
 				// Check connection state
 				if (!connected.get()) {
-					backlogTimer.stop();
 					return;
 				}
 				

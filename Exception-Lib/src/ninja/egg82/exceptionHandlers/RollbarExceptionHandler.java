@@ -1,16 +1,16 @@
 package ninja.egg82.exceptionHandlers;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
-import javax.swing.Timer;
-
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.rollbar.Rollbar;
 import com.rollbar.payload.data.Person;
 
@@ -26,8 +26,7 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	private Rollbar rollbar = null;
 	private LoggingRollbarResponseHandler responseHandler = new LoggingRollbarResponseHandler();
 	
-	private Timer resendTimer = null;
-	private Timer cleanupTimer = null;
+	private ScheduledExecutorService threadPool = null;
 	private IObjectPool<Thread> errorThreads = new DynamicObjectPool<Thread>();
 	
 	//constructor
@@ -78,15 +77,12 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 			}
 		}
 		
-		resendTimer = new Timer(60 * 60 * 1000, onResendTimer);
-		resendTimer.setRepeats(true);
-		resendTimer.start();
-		
-		cleanupTimer = new Timer(5 * 60 * 1000, onCleanupTimer);
-		cleanupTimer.setRepeats(true);
-		cleanupTimer.start();
+		threadPool = Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder().setNameFormat("egg82-Rollbar_Exception-%d").build());
+		threadPool.scheduleWithFixedDelay(onCleanupThread, 60L * 1000L, 60L * 1000L, TimeUnit.MILLISECONDS);
+		threadPool.scheduleWithFixedDelay(onResendThread, 10L * 60L * 1000L, 10L * 60L * 1000L, TimeUnit.MILLISECONDS);
 	}
 	public void disconnect() {
+		threadPool.shutdownNow();
 		for (Thread t : errorThreads) {
 			unhandleUncaughtErrors(t);
 		}
@@ -267,8 +263,8 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 		thread.setUncaughtExceptionHandler(null);
 	}
 	
-	private ActionListener onResendTimer = new ActionListener() {
-		public void actionPerformed(ActionEvent e) {
+	private Runnable onResendThread = new Runnable() {
+		public void run() {
 			List<Pair<LogRecord, Integer>> records = responseHandler.getUnsentLogs();
 			responseHandler.clearLogs();
 			for (Pair<LogRecord, Integer> record : records) {
@@ -303,8 +299,8 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 			}
 		}
 	};
-	private ActionListener onCleanupTimer = new ActionListener() {
-		public void actionPerformed(ActionEvent e) {
+	private Runnable onCleanupThread = new Runnable() {
+		public void run() {
 			errorThreads.removeIf((v) -> (!v.isAlive()));
 		}
 	};

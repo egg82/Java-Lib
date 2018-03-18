@@ -1,14 +1,15 @@
 package ninja.egg82.exceptionHandlers;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
-import javax.swing.Timer;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import ninja.egg82.core.GameAnalyticsAPI;
 import ninja.egg82.exceptionHandlers.builders.IBuilder;
@@ -22,7 +23,7 @@ public class GameAnalyticsExceptionHandler extends Handler implements IException
 	private IObjectPool<LogRecord> logs = new DynamicObjectPool<LogRecord>();
 	private IObjectPool<Exception> exceptions = new DynamicObjectPool<Exception>();
 	
-	private Timer cleanupTimer = null;
+	private ScheduledExecutorService threadPool = null;
 	private IObjectPool<Thread> errorThreads = new DynamicObjectPool<Thread>();
 	
 	//constructor
@@ -54,12 +55,12 @@ public class GameAnalyticsExceptionHandler extends Handler implements IException
 		}
 		exceptions.clear();
 		
-		cleanupTimer = new Timer(5 * 60 * 1000, onCleanupTimer);
-		cleanupTimer.setRepeats(true);
-		cleanupTimer.start();
+		threadPool = Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder().setNameFormat("egg82-GA_Exception-%d").build());
+		threadPool.scheduleWithFixedDelay(onCleanupThread, 60L * 1000L, 60L * 1000L, TimeUnit.MILLISECONDS);
 	}
 	public void disconnect() {
 		if (api != null) {
+			threadPool.shutdownNow();
 			for (Thread t : errorThreads) {
 				api.unhandleUncaughtErrors(t);
 			}
@@ -147,8 +148,8 @@ public class GameAnalyticsExceptionHandler extends Handler implements IException
 	}
 	
 	//private
-	private ActionListener onCleanupTimer = new ActionListener() {
-		public void actionPerformed(ActionEvent e) {
+	private Runnable onCleanupThread = new Runnable() {
+		public void run() {
 			errorThreads.removeIf((v) -> (!v.isAlive()));
 		}
 	};

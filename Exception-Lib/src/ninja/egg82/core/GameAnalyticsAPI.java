@@ -17,6 +17,8 @@ import java.util.logging.Level;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import ninja.egg82.crypto.CryptoHelper;
 import ninja.egg82.crypto.ICryptoHelper;
 import ninja.egg82.exceptions.ArgumentNullException;
@@ -37,7 +39,7 @@ public class GameAnalyticsAPI {
 	private String userId = null;
 	private String sessionId = UUID.randomUUID().toString();
 	
-	private ExecutorService threadPool = Executors.newFixedThreadPool(20, Executors.defaultThreadFactory());
+	private ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), new ThreadFactoryBuilder().setNameFormat("egg82-GA_API-%d").build());
 	
 	//constructor
 	public GameAnalyticsAPI(String gameKey, String secretKey, String version, String userId) {
@@ -125,7 +127,7 @@ public class GameAnalyticsAPI {
 			return;
 		}
 		
-		threadPool.execute(new Runnable() {
+		threadPool.submit(new Runnable() {
 			public void run() {
 				if (!doSend) {
 					try {
@@ -211,7 +213,7 @@ public class GameAnalyticsAPI {
 		});
 	}
 	private void sendInit() {
-		threadPool.execute(new Runnable() {
+		threadPool.submit(new Runnable() {
 			public void run() {
 				HttpURLConnection conn = null;
 				try {

@@ -38,7 +38,7 @@ public abstract class Command {
 	public final void start() {
 		startTime = System.currentTimeMillis();
 		if (delay == 0L) {
-			threadPool.execute(new Runnable() {
+			threadPool.submit(new Runnable() {
 				public void run() {
 					onExecute(System.currentTimeMillis() - startTime);
 				}
