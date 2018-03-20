@@ -10,19 +10,16 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.logging.Level;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import ninja.egg82.crypto.CryptoHelper;
 import ninja.egg82.crypto.ICryptoHelper;
 import ninja.egg82.exceptions.ArgumentNullException;
 import ninja.egg82.patterns.ServiceLocator;
+import ninja.egg82.utils.ThreadUtil;
 
 public class GameAnalyticsAPI {
 	//vars
@@ -38,8 +35,6 @@ public class GameAnalyticsAPI {
 	private boolean doSend = false;
 	private String userId = null;
 	private String sessionId = UUID.randomUUID().toString();
-	
-	private ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), new ThreadFactoryBuilder().setNameFormat("egg82-GA_API-%d").build());
 	
 	//constructor
 	public GameAnalyticsAPI(String gameKey, String secretKey, String version, String userId) {
@@ -127,7 +122,7 @@ public class GameAnalyticsAPI {
 			return;
 		}
 		
-		threadPool.submit(new Runnable() {
+		ThreadUtil.submit(new Runnable() {
 			public void run() {
 				if (!doSend) {
 					try {
@@ -213,7 +208,7 @@ public class GameAnalyticsAPI {
 		});
 	}
 	private void sendInit() {
-		threadPool.submit(new Runnable() {
+		ThreadUtil.submit(new Runnable() {
 			public void run() {
 				HttpURLConnection conn = null;
 				try {

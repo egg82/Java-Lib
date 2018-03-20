@@ -7,7 +7,7 @@ import ninja.egg82.exceptionHandlers.builders.IBuilder;
 
 public interface IExceptionHandler {
 	//functions
-	void connect(IBuilder builder);
+	void connect(IBuilder builder, String threadName);
 	void disconnect();
 	
 	void addThread(Thread thread);

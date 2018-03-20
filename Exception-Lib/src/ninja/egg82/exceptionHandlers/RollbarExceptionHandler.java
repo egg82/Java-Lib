@@ -2,7 +2,6 @@ package ninja.egg82.exceptionHandlers;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Handler;
@@ -20,6 +19,7 @@ import ninja.egg82.exceptions.ArgumentNullException;
 import ninja.egg82.patterns.DynamicObjectPool;
 import ninja.egg82.patterns.IObjectPool;
 import ninja.egg82.patterns.tuples.Pair;
+import ninja.egg82.utils.ThreadUtil;
 
 public class RollbarExceptionHandler extends Handler implements IExceptionHandler {
 	//vars
@@ -32,11 +32,12 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	//constructor
 	public RollbarExceptionHandler() {
 		Logger.getLogger("ninja.egg82.core.PasswordHasher").addHandler(this);
+		Logger.getLogger("ninja.egg82.utils.ThreadUtil").addHandler(this);
 		Logger.getLogger("ninja.egg82.patterns.events.EventHandler").addHandler(this);
 	}
 	
 	//public
-	public void connect(IBuilder builder) {
+	public void connect(IBuilder builder, String threadName) {
 		String[] params = builder.getParams();
 		if (params == null || params.length != 4) {
 			throw new IllegalArgumentException("params must have a length of 4. Use ninja.egg82.exceptionHandlers.builders.RollbarBuilder");
@@ -77,9 +78,9 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 			}
 		}
 		
-		threadPool = Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder().setNameFormat("egg82-Rollbar_Exception-%d").build());
-		threadPool.scheduleWithFixedDelay(onCleanupThread, 60L * 1000L, 60L * 1000L, TimeUnit.MILLISECONDS);
-		threadPool.scheduleWithFixedDelay(onResendThread, 10L * 60L * 1000L, 10L * 60L * 1000L, TimeUnit.MILLISECONDS);
+		threadPool = ThreadUtil.createSingleScheduledPool(new ThreadFactoryBuilder().setNameFormat(threadName + "-Rollbar_Exception-%d").build());
+		threadPool.scheduleAtFixedRate(onCleanupThread, 60L * 1000L, 60L * 1000L, TimeUnit.MILLISECONDS);
+		threadPool.scheduleAtFixedRate(onResendThread, 10L * 60L * 1000L, 10L * 60L * 1000L, TimeUnit.MILLISECONDS);
 	}
 	public void disconnect() {
 		threadPool.shutdownNow();

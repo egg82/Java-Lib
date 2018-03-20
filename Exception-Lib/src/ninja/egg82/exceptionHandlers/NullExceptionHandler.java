@@ -20,7 +20,7 @@ public class NullExceptionHandler extends Handler implements IExceptionHandler {
 	}
 	
 	//public
-	public void connect(IBuilder builder) {
+	public void connect(IBuilder builder, String threadName) {
 		throw new RuntimeException("This API does not support sending exceptions.");
 	}
 	public void disconnect() {

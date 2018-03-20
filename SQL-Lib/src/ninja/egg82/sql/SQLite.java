@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.Map.Entry;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -41,6 +40,7 @@ import ninja.egg82.patterns.IObjectPool;
 import ninja.egg82.patterns.events.EventArgs;
 import ninja.egg82.patterns.events.EventHandler;
 import ninja.egg82.utils.FileUtil;
+import ninja.egg82.utils.ThreadUtil;
 
 public class SQLite implements ISQL {
 	//vars
@@ -61,10 +61,12 @@ public class SQLite implements ISQL {
 	// Object pool for storing "dead" query data - so we don't re-create a new data object for every query
 	private IObjectPool<SQLQueueData> queueDataPool = new DynamicObjectPool<SQLQueueData>();
 	
-	// Thread pool for query threads. The thread count is to be determined by the constructor
+	// Thread pool for query threads. Pool size determined by constructor
 	private ScheduledExecutorService threadPool = null;
 	// A lock that, when locked, tells the current send threads to wait for the current blocking query to finish
 	private Lock parallelLock = new ReentrantLock();
+	// Name given to the thread pool
+	private String threadName = null;
 	
 	// Connected state. Atomic because multithreading is HARD
 	private AtomicBoolean connected = new AtomicBoolean(false);
@@ -79,14 +81,16 @@ public class SQLite implements ISQL {
 	private String filePath = null;
 	
 	//constructor
-	public SQLite(int numConnections) {
-		this(numConnections, null);
+	public SQLite(int numConnections, String threadName) {
+		this(numConnections, threadName, null);
 	}
-	public SQLite(int numConnections, ClassLoader customLoader) {
+	public SQLite(int numConnections, String threadName, ClassLoader customLoader) {
 		if (numConnections < 2) {
 			numConnections = 2;
 		}
 		freeConnections = new FixedObjectPool<Connection>(numConnections);
+		
+		this.threadName = threadName;
 		
 		// Check to see if SQLite is loaded
 		if (m == null || loader == null) {
@@ -176,7 +180,7 @@ public class SQLite implements ISQL {
 		}
 		
 		// Create the thread pool. Why here instead of the constructor? Because we call shutdown() on this pool in disconnect
-		threadPool = Executors.newScheduledThreadPool(freeConnections.size(), new ThreadFactoryBuilder().setNameFormat("egg82-SQlite-%d").build());
+		threadPool = ThreadUtil.createScheduledPool(1, freeConnections.size(), 500L, new ThreadFactoryBuilder().setNameFormat(threadName + "-SQlite-%d").build());
 		
 		// Start the flush timer and set the connected state
 		threadPool.scheduleAtFixedRate(onBacklogThread, 250L, 250L, TimeUnit.MILLISECONDS);

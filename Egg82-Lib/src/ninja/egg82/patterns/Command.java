@@ -1,19 +1,12 @@
 package ninja.egg82.patterns;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import ninja.egg82.events.CompleteEventArgs;
 import ninja.egg82.events.ExceptionEventArgs;
 import ninja.egg82.patterns.events.EventHandler;
+import ninja.egg82.utils.ThreadUtil;
 
 public abstract class Command {
 	//vars
-	private static ScheduledExecutorService threadPool = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors(), new ThreadFactoryBuilder().setNameFormat("egg82-Command-%d").build());
-	
 	private final EventHandler<CompleteEventArgs<?>> complete = new EventHandler<CompleteEventArgs<?>>();
 	private final EventHandler<ExceptionEventArgs<?>> error = new EventHandler<ExceptionEventArgs<?>>();
 	
@@ -38,17 +31,17 @@ public abstract class Command {
 	public final void start() {
 		startTime = System.currentTimeMillis();
 		if (delay == 0L) {
-			threadPool.submit(new Runnable() {
+			ThreadUtil.submit(new Runnable() {
 				public void run() {
 					onExecute(System.currentTimeMillis() - startTime);
 				}
 			});
 		} else {
-			threadPool.schedule(new Runnable() {
+			ThreadUtil.schedule(new Runnable() {
 				public void run() {
 					onExecute(System.currentTimeMillis() - startTime);
 				}
-			}, delay, TimeUnit.MILLISECONDS);
+			}, delay);
 		}
 	}
 	
