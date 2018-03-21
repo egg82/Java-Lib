@@ -2,6 +2,7 @@ package ninja.egg82.exceptionHandlers;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Handler;
@@ -14,7 +15,6 @@ import ninja.egg82.core.GameAnalyticsAPI;
 import ninja.egg82.exceptionHandlers.builders.IBuilder;
 import ninja.egg82.patterns.DynamicObjectPool;
 import ninja.egg82.patterns.IObjectPool;
-import ninja.egg82.utils.ThreadUtil;
 
 public class GameAnalyticsExceptionHandler extends Handler implements IExceptionHandler {
 	//vars
@@ -56,7 +56,7 @@ public class GameAnalyticsExceptionHandler extends Handler implements IException
 		}
 		exceptions.clear();
 		
-		threadPool = ThreadUtil.createSingleScheduledPool(new ThreadFactoryBuilder().setNameFormat(threadName + "-GA_Exception-%d").build());
+		threadPool = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setNameFormat(threadName + "-GA_Exception-%d").build());
 		threadPool.scheduleAtFixedRate(onCleanupThread, 60L * 1000L, 60L * 1000L, TimeUnit.MILLISECONDS);
 	}
 	public void disconnect() {

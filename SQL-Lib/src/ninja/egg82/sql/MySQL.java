@@ -184,7 +184,7 @@ public class MySQL implements ISQL {
 		}
 		
 		// Create the thread pool. Why here instead of the constructor? Because we call shutdown() on this pool in disconnect
-		threadPool = ThreadUtil.createScheduledPool(1, freeConnections.size(), 500L, new ThreadFactoryBuilder().setNameFormat(threadName + "-MySQL-%d").build());
+		threadPool = ThreadUtil.createScheduledPool(1, freeConnections.size(), 120L * 1000L, new ThreadFactoryBuilder().setNameFormat(threadName + "-MySQL-%d").build());
 		
 		// Start the flush timer and set the connected state
 		threadPool.scheduleAtFixedRate(onBacklogThread, 250L, 250L, TimeUnit.MILLISECONDS);

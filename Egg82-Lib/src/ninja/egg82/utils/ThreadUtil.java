@@ -2,11 +2,11 @@ package ninja.egg82.utils;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -25,11 +25,12 @@ public class ThreadUtil {
 	
 	// Thread pools
 	private static ThreadPoolExecutor dynamicPool = null;
-	private static ScheduledThreadPoolExecutor singlePool = null;
+	private static ScheduledExecutorService singlePool = null;
+	private static ThreadFactory singleThreadFactory = new ThreadFactoryBuilder().setNameFormat("egg82-single_scheduled-%d").build();
 	private static MinMaxScheduledThreadPoolExecutor scheduledPool = null;
 	
 	// Thread queue for the dynamic pool
-	private static BlockingQueue<Runnable> dynamicQueue = new ArrayBlockingQueue<Runnable>(200);
+	private static BlockingQueue<Runnable> dynamicQueue = new ArrayBlockingQueue<Runnable>(250);
 	
 	//constructor
 	public ThreadUtil() {
@@ -61,7 +62,7 @@ public class ThreadUtil {
 	 */
 	public static ScheduledFuture<?> schedule(Runnable runnable, long delayMillis) {
 		if (singlePool == null) {
-			singlePool = createSinglePool(new ThreadFactoryBuilder().setNameFormat("egg82-single_scheduled-%d").build());
+			singlePool = Executors.newSingleThreadScheduledExecutor(singleThreadFactory);
 		}
 		
 		return singlePool.schedule(new Runnable() {
@@ -109,17 +110,17 @@ public class ThreadUtil {
 	 */
 	public static void rename(String newName) {
 		if (dynamicPool == null) {
-			dynamicPool = createDynamicPool(new ThreadFactoryBuilder().setNameFormat("egg82-dynamic-%d").build());
+			dynamicPool = createDynamicPool(new ThreadFactoryBuilder().setNameFormat(newName + "-dynamic-%d").build());
 		} else {
 			dynamicPool.setThreadFactory(new ThreadFactoryBuilder().setNameFormat(newName + "-dynamic-%d").build());
 		}
-		if (singlePool == null) {
-			singlePool = createSinglePool(new ThreadFactoryBuilder().setNameFormat("egg82-single_scheduled-%d").build());
-		} else {
-			singlePool.setThreadFactory(new ThreadFactoryBuilder().setNameFormat(newName + "-single_scheduled-%d").build());
+		singleThreadFactory = new ThreadFactoryBuilder().setNameFormat(newName + "-single_scheduled-%d").build();
+		if (singlePool != null) {
+			singlePool.shutdown();
 		}
+		singlePool = Executors.newSingleThreadScheduledExecutor(singleThreadFactory);
 		if (scheduledPool == null) {
-			scheduledPool = createScheduledPool(new ThreadFactoryBuilder().setNameFormat("egg82-scheduled-%d").build());
+			scheduledPool = createScheduledPool(new ThreadFactoryBuilder().setNameFormat(newName + "-scheduled-%d").build());
 		} else {
 			scheduledPool.setThreadFactory(new ThreadFactoryBuilder().setNameFormat(newName + "-scheduled-%d").build());
 		}
@@ -173,40 +174,18 @@ public class ThreadUtil {
 		}
 		
 		dynamicPool = createDynamicPool(dynamicPool.getThreadFactory());
-		singlePool = createSinglePool(singlePool.getThreadFactory());
+		singlePool = Executors.newSingleThreadScheduledExecutor(singleThreadFactory);
 		scheduledPool = createScheduledPool(scheduledPool.getThreadFactory());
 	}
 	
 	public static ScheduledExecutorService createScheduledPool(int minPoolSize, int maxPoolSize, long keepAliveMillis, ThreadFactory threadFactory) {
 		return new MinMaxScheduledThreadPoolExecutor(minPoolSize, maxPoolSize, keepAliveMillis, threadFactory);
 	}
-	public static ScheduledExecutorService createSingleScheduledPool(ThreadFactory threadFactory) {
-		// Create a pool at a size of 1
-		ScheduledThreadPoolExecutor retVal = new ScheduledThreadPoolExecutor(1);
-		// Pre-start threads
-		retVal.prestartAllCoreThreads();
-		
-		// Fill the backlog if needed
-		retVal.setRejectedExecutionHandler(new RejectedExecutionHandler() {
-			public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-				try {
-					executor.getQueue().put(r);
-				} catch (Exception ex) {
-					
-				}
-			}
-		});
-		
-		// Set the factory
-		retVal.setThreadFactory(threadFactory);
-		
-		return retVal;
-	}
 	
 	//private
 	private static ThreadPoolExecutor createDynamicPool(ThreadFactory threadFactory) {
-		// Create a pool starting at 1 and ending at the number of available processors. Kill new threads after 150 ms if nothing new comes in
-		ThreadPoolExecutor retVal = new ThreadPoolExecutor(1, Runtime.getRuntime().availableProcessors(), 150, TimeUnit.MILLISECONDS, dynamicQueue);
+		// Create a pool starting at 1 and ending at the number of available processors. Kill new threads after 30s if nothing new comes in
+		ThreadPoolExecutor retVal = new ThreadPoolExecutor(1, Runtime.getRuntime().availableProcessors(), 30L * 1000L, TimeUnit.MILLISECONDS, dynamicQueue);
 		// Allow the core threads to terminate just like the non-core threads
 		retVal.allowCoreThreadTimeOut(true);
 		
@@ -226,30 +205,8 @@ public class ThreadUtil {
 		
 		return retVal;
 	}
-	private static ScheduledThreadPoolExecutor createSinglePool(ThreadFactory threadFactory) {
-		// Create a pool with 1 thread
-		ScheduledThreadPoolExecutor retVal = new ScheduledThreadPoolExecutor(1);
-		// Pre-start threads
-		retVal.prestartAllCoreThreads();
-		
-		// Fill the backlog if needed
-		retVal.setRejectedExecutionHandler(new RejectedExecutionHandler() {
-			public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-				try {
-					executor.getQueue().put(r);
-				} catch (Exception ex) {
-					
-				}
-			}
-		});
-		
-		// Set the factory
-		retVal.setThreadFactory(threadFactory);
-		
-		return retVal;
-	}
 	private static MinMaxScheduledThreadPoolExecutor createScheduledPool(ThreadFactory threadFactory) {
-		// Create a pool starting at 1 and ending at the number of available processors. Kill new threads after 150 ms if nothing new comes in
-		return new MinMaxScheduledThreadPoolExecutor(1, Runtime.getRuntime().availableProcessors(), 150, threadFactory);
+		// Create a pool starting at 1 and ending at the number of available processors. Kill new threads after 120s if nothing new comes in
+		return new MinMaxScheduledThreadPoolExecutor(1, Runtime.getRuntime().availableProcessors(), 120L * 1000L, threadFactory);
 	}
 }

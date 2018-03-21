@@ -7,12 +7,10 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -20,8 +18,13 @@ import ninja.egg82.exceptions.ArgumentNullException;
 
 public class MinMaxScheduledThreadPoolExecutor implements ScheduledExecutorService {
 	//vars
+	
+	// Backing thread pools
 	private ScheduledThreadPoolExecutor core = null;
 	private ScheduledThreadPoolExecutor extra = null;
+	
+	// Max threads in the extra pool
+	private int extraMax = 0;
 	
 	//constructor
 	public MinMaxScheduledThreadPoolExecutor(int min, int max, long keepAliveMillis) {
@@ -38,16 +41,16 @@ public class MinMaxScheduledThreadPoolExecutor implements ScheduledExecutorServi
 			throw new IllegalArgumentException("min and max cannot be 0.");
 		}
 		
-		int extraThreads = max - min;
-		if (extraThreads < 0) {
+		extraMax = max - min;
+		if (extraMax < 0) {
 			throw new IllegalArgumentException("max cannot be < min.");
 		}
 		
 		if (min > 0) {
-			core = createCore(min, threadFactory);
+			core = new ScheduledThreadPoolExecutor(min, threadFactory);
 		}
-		if (extraThreads > 0) {
-			extra = createExtra(extraThreads, keepAliveMillis, threadFactory);
+		if (extraMax > 0) {
+			extra = createExtra(keepAliveMillis, threadFactory);
 		}
 	}
 	
@@ -101,315 +104,529 @@ public class MinMaxScheduledThreadPoolExecutor implements ScheduledExecutorServi
 	
 	public <T> Future<T> submit(Callable<T> task) {
 		if (core != null) {
+			// We have a core
 			if (extra != null) {
-				if (core.getQueue().size() > 0 || core.getActiveCount() >= core.getCorePoolSize()) {
-					return extra.submit(task);
+				// We have extra
+				if (core.getActiveCount() >= core.getCorePoolSize()) {
+					// Core is maxed out
+					if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+						// Extra is entirely active, but not maxed out
+						extra.setCorePoolSize(extra.getCorePoolSize() + 1);
+					}
+					return extra.submit(getHandlerWrapper(task));
 				} else {
+					// Core is not maxed out, submit to core
 					return core.submit(task);
 				}
 			} else {
+				// We don't have extra, submit to core
 				return core.submit(task);
 			}
+		} else {
+			// We have extra, but no core. Submit to extra
+			if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+				// Extra is entirely active, but not maxed out
+				extra.setCorePoolSize(extra.getCorePoolSize() + 1);
+			}
+			return extra.submit(getHandlerWrapper(task));
 		}
-		if (extra != null) {
-			return extra.submit(task);
-		}
-		return null;
 	}
 	public <T> Future<T> submit(Runnable task, T result) {
 		if (core != null) {
+			// We have a core
 			if (extra != null) {
-				if (core.getQueue().size() > 0 || core.getActiveCount() >= core.getCorePoolSize()) {
-					return extra.submit(task, result);
+				// We have extra
+				if (core.getActiveCount() >= core.getCorePoolSize()) {
+					// Core is maxed out
+					if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+						// Extra is entirely active, but not maxed out
+						extra.setCorePoolSize(extra.getCorePoolSize() + 1);
+					}
+					return extra.submit(getHandlerWrapper(task), result);
 				} else {
+					// Core is not maxed out, submit to core
 					return core.submit(task, result);
 				}
 			} else {
+				// We don't have extra, submit to core
 				return core.submit(task, result);
 			}
+		} else {
+			// We have extra, but no core. Submit to extra
+			if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+				// Extra is entirely active, but not maxed out
+				extra.setCorePoolSize(extra.getCorePoolSize() + 1);
+			}
+			return extra.submit(getHandlerWrapper(task), result);
 		}
-		if (extra != null) {
-			return extra.submit(task, result);
-		}
-		return null;
 	}
 	public Future<?> submit(Runnable task) {
 		if (core != null) {
+			// We have a core
 			if (extra != null) {
-				if (core.getQueue().size() > 0 || core.getActiveCount() >= core.getCorePoolSize()) {
-					return extra.submit(task);
+				// We have extra
+				if (core.getActiveCount() >= core.getCorePoolSize()) {
+					// Core is maxed out
+					if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+						// Extra is entirely active, but not maxed out
+						extra.setCorePoolSize(extra.getCorePoolSize() + 1);
+					}
+					return extra.submit(getHandlerWrapper(task));
 				} else {
+					// Core is not maxed out, submit to core
 					return core.submit(task);
 				}
 			} else {
+				// We don't have extra, submit to core
 				return core.submit(task);
 			}
+		} else {
+			// We have extra, but no core. Submit to extra
+			if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+				// Extra is entirely active, but not maxed out
+				extra.setCorePoolSize(extra.getCorePoolSize() + 1);
+			}
+			return extra.submit(getHandlerWrapper(task));
 		}
-		if (extra != null) {
-			return extra.submit(task);
-		}
-		return null;
 	}
 	
 	public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks) throws InterruptedException {
 		if (core != null) {
+			// We have a core
 			if (extra != null) {
-				if (core.getQueue().size() > 0 || core.getActiveCount() >= core.getCorePoolSize()) {
-					return extra.invokeAll(tasks);
-				}
+				// We have extra
 				
-				if (core.getActiveCount() >= core.getCorePoolSize() - tasks.size()) {
+				// Get the core pool active count
+				int coreActiveCount = core.getActiveCount();
+				
+				if (coreActiveCount >= core.getCorePoolSize()) {
+					// Core is maxed out
+					if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+						// Extra is entirely active, but not maxed out
+						extra.setCorePoolSize(Math.min(extraMax, extra.getCorePoolSize() + tasks.size()));
+					}
+					return extra.invokeAll(tasks);
+				} else if (coreActiveCount >= core.getCorePoolSize() - tasks.size()) {
+					// Core doesn't have enough room to take the full amount. Submit to both
+					
+					// Create a new (splittable) list
 					List<Callable<T>> list = new ArrayList<Callable<T>>();
 					list.addAll(tasks);
 					
 					List<Future<T>> retVal = new ArrayList<Future<T>>();
 					
-					int remainingTasks = core.getCorePoolSize() - core.getActiveCount();
+					// The number of tasks core can't take
+					int remainingTasks = core.getCorePoolSize() - coreActiveCount;
 					
+					// Split the list and add to core
 					retVal.addAll(core.invokeAll(list.subList(0, remainingTasks)));
-					retVal.addAll(extra.invokeAll(list.subList(remainingTasks + 1, tasks.size() - 1)));
+					if (extra.getCorePoolSize() < extraMax && extra.getActiveCount() >= extra.getCorePoolSize()) {
+						// Extra is entirely active, but not maxed out
+						extra.setCorePoolSize(Math.min(extraMax, extra.getCorePoolSize() + remainingTasks));
+					}
+					// Add the remainder to extra
+					retVal.addAll(extra.invokeAll(getHandlerWrapper(list.subList(remainingTasks + 1, tasks.size() - 1))));
 					
 					return retVal;
 				} else {
+					// Core is not maxed out, submit to core
 					return core.invokeAll(tasks);
 				}
 			} else {
+				// We don't have extra, submit to core. Submit to extra
 				return core.invokeAll(tasks);
 			}
+		} else {
+			// We have extra, but no core
+			if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+				// Extra is entirely active, but not maxed out
+				extra.setCorePoolSize(Math.min(extraMax, extra.getCorePoolSize() + tasks.size()));
+			}
+			return extra.invokeAll(getHandlerWrapper(tasks));
 		}
-		if (extra != null) {
-			return extra.invokeAll(tasks);
-		}
-		return null;
 	}
 	public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException {
 		if (core != null) {
+			// We have a core
 			if (extra != null) {
-				if (core.getQueue().size() > 0 || core.getActiveCount() >= core.getCorePoolSize()) {
-					return extra.invokeAll(tasks, timeout, unit);
-				}
+				// We have extra
 				
-				if (core.getActiveCount() >= core.getCorePoolSize() - tasks.size()) {
+				// Get the core pool active count
+				int coreActiveCount = core.getActiveCount();
+				
+				if (coreActiveCount >= core.getCorePoolSize()) {
+					// Core is maxed out
+					if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+						// Extra is entirely active, but not maxed out
+						extra.setCorePoolSize(Math.min(extraMax, extra.getCorePoolSize() + tasks.size()));
+					}
+					return extra.invokeAll(tasks);
+				} else if (coreActiveCount >= core.getCorePoolSize() - tasks.size()) {
+					// Core doesn't have enough room to take the full amount. Submit to both
+					
+					// Create a new (splittable) list
 					List<Callable<T>> list = new ArrayList<Callable<T>>();
 					list.addAll(tasks);
 					
 					List<Future<T>> retVal = new ArrayList<Future<T>>();
 					
-					int remainingTasks = core.getCorePoolSize() - core.getActiveCount();
+					// The number of tasks core can't take
+					int remainingTasks = core.getCorePoolSize() - coreActiveCount;
 					
-					retVal.addAll(core.invokeAll(list.subList(0, remainingTasks), timeout, unit));
-					retVal.addAll(extra.invokeAll(list.subList(remainingTasks + 1, tasks.size() - 1), timeout, unit));
+					// Split the list and add to core
+					retVal.addAll(core.invokeAll(list.subList(0, remainingTasks)));
+					if (extra.getCorePoolSize() < extraMax && extra.getActiveCount() >= extra.getCorePoolSize()) {
+						// Extra is entirely active, but not maxed out
+						extra.setCorePoolSize(Math.min(extraMax, extra.getCorePoolSize() + remainingTasks));
+					}
+					// Add the remainder to extra
+					retVal.addAll(extra.invokeAll(getHandlerWrapper(list.subList(remainingTasks + 1, tasks.size() - 1))));
 					
 					return retVal;
 				} else {
-					return core.invokeAll(tasks, timeout, unit);
+					// Core is not maxed out, submit to core
+					return core.invokeAll(tasks);
 				}
 			} else {
-				return core.invokeAll(tasks, timeout, unit);
+				// We don't have extra, submit to core. Submit to extra
+				return core.invokeAll(tasks);
 			}
+		} else {
+			// We have extra, but no core
+			if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+				// Extra is entirely active, but not maxed out
+				extra.setCorePoolSize(Math.min(extraMax, extra.getCorePoolSize() + tasks.size()));
+			}
+			return extra.invokeAll(getHandlerWrapper(tasks));
 		}
-		if (extra != null) {
-			return extra.invokeAll(tasks, timeout, unit);
-		}
-		return null;
 	}
 	public <T> T invokeAny(Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
 		if (core != null) {
+			// We have a core
 			if (extra != null) {
-				if (core.getQueue().size() > 0 || core.getActiveCount() >= core.getCorePoolSize()) {
-					return extra.invokeAny(tasks);
-				}
+				// We have extra
 				
-				if (core.getActiveCount() >= core.getCorePoolSize() - tasks.size()) {
+				// Get the core pool active count
+				int coreActiveCount = core.getActiveCount();
+				
+				if (coreActiveCount >= core.getCorePoolSize()) {
+					// Core is maxed out
+					if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+						// Extra is entirely active, but not maxed out
+						extra.setCorePoolSize(Math.min(extraMax, extra.getCorePoolSize() + tasks.size()));
+					}
+					return extra.invokeAny(tasks);
+				} else if (coreActiveCount >= core.getCorePoolSize() - tasks.size()) {
+					// Core doesn't have enough room to take the full amount. Submit to both
+					
+					// Create a new (splittable) list
 					List<Callable<T>> list = new ArrayList<Callable<T>>();
 					list.addAll(tasks);
 					
 					T retVal = null;
 					
-					int remainingTasks = core.getCorePoolSize() - core.getActiveCount();
+					// The number of tasks core can't take
+					int remainingTasks = core.getCorePoolSize() - coreActiveCount;
 					
+					// Split the list and add to core
 					retVal = core.invokeAny(list.subList(0, remainingTasks));
 					if (retVal == null) {
-						retVal = extra.invokeAny(list.subList(remainingTasks + 1, tasks.size() - 1));
+						// No return value yet, submit the remaining tasks to extra
+						if (extra.getCorePoolSize() < extraMax && extra.getActiveCount() >= extra.getCorePoolSize()) {
+							// Extra is entirely active, but not maxed out
+							extra.setCorePoolSize(Math.min(extraMax, extra.getCorePoolSize() + remainingTasks));
+						}
+						// Add the remainder to extra
+						retVal = extra.invokeAny(getHandlerWrapper(list.subList(remainingTasks + 1, tasks.size() - 1)));
 					}
 					
 					return retVal;
 				} else {
+					// Core is not maxed out, submit to core
 					return core.invokeAny(tasks);
 				}
 			} else {
+				// We don't have extra, submit to core
 				return core.invokeAny(tasks);
 			}
+		} else {
+			// We have extra, but no core. Submit to extra
+			if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+				// Extra is entirely active, but not maxed out
+				extra.setCorePoolSize(Math.min(extraMax, extra.getCorePoolSize() + tasks.size()));
+			}
+			return extra.invokeAny(getHandlerWrapper(tasks));
 		}
-		if (extra != null) {
-			return extra.invokeAny(tasks);
-		}
-		return null;
 	}
 	public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
 		if (core != null) {
+			// We have a core
 			if (extra != null) {
-				if (core.getQueue().size() > 0 || core.getActiveCount() >= core.getCorePoolSize()) {
-					return extra.invokeAny(tasks, timeout, unit);
-				}
+				// We have extra
 				
-				if (core.getActiveCount() >= core.getCorePoolSize() - tasks.size()) {
+				// Get the core pool active count
+				int coreActiveCount = core.getActiveCount();
+				
+				if (coreActiveCount >= core.getCorePoolSize()) {
+					// Core is maxed out
+					if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+						// Extra is entirely active, but not maxed out
+						extra.setCorePoolSize(Math.min(extraMax, extra.getCorePoolSize() + tasks.size()));
+					}
+					return extra.invokeAny(tasks);
+				} else if (coreActiveCount >= core.getCorePoolSize() - tasks.size()) {
+					// Core doesn't have enough room to take the full amount. Submit to both
+					
+					// Create a new (splittable) list
 					List<Callable<T>> list = new ArrayList<Callable<T>>();
 					list.addAll(tasks);
 					
 					T retVal = null;
 					
-					int remainingTasks = core.getCorePoolSize() - core.getActiveCount();
+					// The number of tasks core can't take
+					int remainingTasks = core.getCorePoolSize() - coreActiveCount;
 					
-					retVal = core.invokeAny(list.subList(0, remainingTasks), timeout, unit);
+					// Split the list and add to core
+					retVal = core.invokeAny(list.subList(0, remainingTasks));
 					if (retVal == null) {
-						retVal = extra.invokeAny(list.subList(remainingTasks + 1, tasks.size() - 1), timeout, unit);
+						// No return value yet, submit the remaining tasks to extra
+						if (extra.getCorePoolSize() < extraMax && extra.getActiveCount() >= extra.getCorePoolSize()) {
+							// Extra is entirely active, but not maxed out
+							extra.setCorePoolSize(Math.min(extraMax, extra.getCorePoolSize() + remainingTasks));
+						}
+						// Add the remainder to extra
+						retVal = extra.invokeAny(getHandlerWrapper(list.subList(remainingTasks + 1, tasks.size() - 1)));
 					}
 					
 					return retVal;
 				} else {
-					return core.invokeAny(tasks, timeout, unit);
+					// Core is not maxed out, submit to core
+					return core.invokeAny(tasks);
 				}
 			} else {
-				return core.invokeAny(tasks, timeout, unit);
+				// We don't have extra, submit to core
+				return core.invokeAny(tasks);
 			}
+		} else {
+			// We have extra, but no core. Submit to extra
+			if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+				// Extra is entirely active, but not maxed out
+				extra.setCorePoolSize(Math.min(extraMax, extra.getCorePoolSize() + tasks.size()));
+			}
+			return extra.invokeAny(getHandlerWrapper(tasks));
 		}
-		if (extra != null) {
-			return extra.invokeAny(tasks, timeout, unit);
-		}
-		return null;
 	}
 	
 	public void execute(Runnable command) {
 		if (core != null) {
+			// We have a core
 			if (extra != null) {
-				if (core.getQueue().size() > 0 || core.getActiveCount() >= core.getCorePoolSize()) {
-					extra.execute(command);
+				// We have extra
+				if (core.getActiveCount() >= core.getCorePoolSize()) {
+					// Core is maxed out
+					if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+						// Extra is entirely active, but not maxed out
+						extra.setCorePoolSize(extra.getCorePoolSize() + 1);
+					}
+					extra.execute(getHandlerWrapper(command));
 				} else {
+					// Core is not maxed out, submit to core
 					core.execute(command);
 				}
 			} else {
+				// We don't have extra, submit to core
 				core.execute(command);
 			}
-		}
-		if (extra != null) {
-			extra.execute(command);
+		} else {
+			// We have extra, but no core. Submit to extra
+			if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+				// Extra is entirely active, but not maxed out
+				extra.setCorePoolSize(extra.getCorePoolSize() + 1);
+			}
+			extra.execute(getHandlerWrapper(command));
 		}
 	}
 	
 	public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
 		if (core != null) {
+			// We have a core
 			if (extra != null) {
-				if (core.getQueue().size() > 0 || core.getActiveCount() >= core.getCorePoolSize()) {
-					return extra.schedule(command, delay, unit);
+				// We have extra
+				if (core.getActiveCount() >= core.getCorePoolSize()) {
+					// Core is maxed out
+					if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+						// Extra is entirely active, but not maxed out
+						extra.setCorePoolSize(extra.getCorePoolSize() + 1);
+					}
+					return extra.schedule(getHandlerWrapper(command), delay, unit);
 				} else {
+					// Core is not maxed out, submit to core
 					return core.schedule(command, delay, unit);
 				}
 			} else {
+				// We don't have extra, submit to core
 				return core.schedule(command, delay, unit);
 			}
+		} else {
+			// We have extra, but no core. Submit to extra
+			if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+				// Extra is entirely active, but not maxed out
+				extra.setCorePoolSize(extra.getCorePoolSize() + 1);
+			}
+			return extra.schedule(getHandlerWrapper(command), delay, unit);
 		}
-		if (extra != null) {
-			return extra.schedule(command, delay, unit);
-		}
-		return null;
 	}
 	public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
 		if (core != null) {
+			// We have a core
 			if (extra != null) {
-				if (core.getQueue().size() > 0 || core.getActiveCount() >= core.getCorePoolSize()) {
-					return extra.schedule(callable, delay, unit);
+				// We have extra
+				if (core.getActiveCount() >= core.getCorePoolSize()) {
+					// Core is maxed out
+					if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+						// Extra is entirely active, but not maxed out
+						extra.setCorePoolSize(extra.getCorePoolSize() + 1);
+					}
+					return extra.schedule(getHandlerWrapper(callable), delay, unit);
 				} else {
+					// Core is not maxed out, submit to core
 					return core.schedule(callable, delay, unit);
 				}
 			} else {
+				// We don't have extra, submit to core
 				return core.schedule(callable, delay, unit);
 			}
+		} else {
+			// We have extra, but no core. Submit to extra
+			if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+				// Extra is entirely active, but not maxed out
+				extra.setCorePoolSize(extra.getCorePoolSize() + 1);
+			}
+			return extra.schedule(getHandlerWrapper(callable), delay, unit);
 		}
-		if (extra != null) {
-			return extra.schedule(callable, delay, unit);
-		}
-		return null;
 	}
 	public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
 		if (core != null) {
+			// We have a core
 			if (extra != null) {
-				if (core.getQueue().size() > 0 || core.getActiveCount() >= core.getCorePoolSize()) {
-					return extra.scheduleAtFixedRate(command, initialDelay, period, unit);
+				// We have extra
+				if (core.getActiveCount() >= core.getCorePoolSize()) {
+					// Core is maxed out
+					if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+						// Extra is entirely active, but not maxed out
+						extra.setCorePoolSize(extra.getCorePoolSize() + 1);
+					}
+					return extra.scheduleAtFixedRate(getHandlerWrapper(command), initialDelay, period, unit);
 				} else {
+					// Core is not maxed out, submit to core
 					return core.scheduleAtFixedRate(command, initialDelay, period, unit);
 				}
 			} else {
+				// We don't have extra, submit to core
 				return core.scheduleAtFixedRate(command, initialDelay, period, unit);
 			}
+		} else {
+			// We have extra, but no core. Submit to extra
+			if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+				// Extra is entirely active, but not maxed out
+				extra.setCorePoolSize(extra.getCorePoolSize() + 1);
+			}
+			return extra.scheduleAtFixedRate(getHandlerWrapper(command), initialDelay, period, unit);
 		}
-		if (extra != null) {
-			return extra.scheduleAtFixedRate(command, initialDelay, period, unit);
-		}
-		return null;
 	}
 	public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
 		if (core != null) {
+			// We have a core
 			if (extra != null) {
-				if (core.getQueue().size() > 0 || core.getActiveCount() >= core.getCorePoolSize()) {
-					return extra.scheduleWithFixedDelay(command, initialDelay, delay, unit);
+				// We have extra
+				if (core.getActiveCount() >= core.getCorePoolSize()) {
+					// Core is maxed out
+					if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+						// Extra is entirely active, but not maxed out
+						extra.setCorePoolSize(extra.getCorePoolSize() + 1);
+					}
+					return extra.scheduleWithFixedDelay(getHandlerWrapper(command), initialDelay, delay, unit);
 				} else {
+					// Core is not maxed out, submit to core
 					return core.scheduleWithFixedDelay(command, initialDelay, delay, unit);
 				}
 			} else {
+				// We don't have extra, submit to core
 				return core.scheduleWithFixedDelay(command, initialDelay, delay, unit);
 			}
+		} else {
+			// We have extra, but no core. Submit to extra
+			if (extra.getActiveCount() >= extra.getCorePoolSize() && extra.getCorePoolSize() < extraMax) {
+				// Extra is entirely active, but not maxed out
+				extra.setCorePoolSize(extra.getCorePoolSize() + 1);
+			}
+			return extra.scheduleWithFixedDelay(getHandlerWrapper(command), initialDelay, delay, unit);
 		}
-		if (extra != null) {
-			return extra.scheduleWithFixedDelay(command, initialDelay, delay, unit);
-		}
-		return null;
 	}
 	
 	//private
-	private ScheduledThreadPoolExecutor createCore(int size, ThreadFactory threadFactory) {
-		// Create a pool with the specified size
-		ScheduledThreadPoolExecutor retVal = new ScheduledThreadPoolExecutor(size);
-		// Pre-start threads
-		retVal.prestartAllCoreThreads();
-		
-		// Fill the backlog if needed
-		retVal.setRejectedExecutionHandler(new RejectedExecutionHandler() {
-			public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-				try {
-					executor.getQueue().put(r);
-				} catch (Exception ex) {
-					
-				}
-			}
-		});
-		
-		// Set the factory
-		retVal.setThreadFactory(threadFactory);
-		
-		return retVal;
-	}
-	private ScheduledThreadPoolExecutor createExtra(int size, long keepAliveMillis, ThreadFactory threadFactory) {
-		// Create a pool with the specified size
-		ScheduledThreadPoolExecutor retVal = new ScheduledThreadPoolExecutor(size);
+	private ScheduledThreadPoolExecutor createExtra(long keepAliveMillis, ThreadFactory threadFactory) {
+		// Create a pool with a size of 1
+		ScheduledThreadPoolExecutor retVal = new ScheduledThreadPoolExecutor(1, new FifoThreadFactory(threadFactory));
 		// Kill new threads after keepAliveMillis if nothing new comes in
 		retVal.setKeepAliveTime(keepAliveMillis, TimeUnit.MILLISECONDS);
 		// Allow the core threads to terminate
 		retVal.allowCoreThreadTimeOut(true);
 		
-		// Fill the backlog if needed
-		retVal.setRejectedExecutionHandler(new RejectedExecutionHandler() {
-			public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+		return retVal;
+	}
+	
+	private <T> Callable<T> getHandlerWrapper(Callable<T> task) {
+		return new Callable<T>() {
+			public T call() throws Exception {
+				T result = null;
+				Exception lastEx = null;
 				try {
-					executor.getQueue().put(r);
+					result = task.call();
 				} catch (Exception ex) {
-					
+					lastEx = ex;
+				}
+				
+				if (extra.getActiveCount() >= extra.getCorePoolSize()) {
+					// No need for extra threads
+					extra.setCorePoolSize(extra.getCorePoolSize() - 1);
+				}
+				
+				if (lastEx != null) {
+					throw new RuntimeException(lastEx);
+				}
+				
+				return result;
+			}
+		};
+	}
+	private Runnable getHandlerWrapper(Runnable task) {
+		return new Runnable() {
+			public void run() {
+				Exception lastEx = null;
+				try {
+					task.run();
+				} catch (Exception ex) {
+					lastEx = ex;
+				}
+				
+				if (extra.getActiveCount() >= extra.getCorePoolSize()) {
+					// No need for extra threads
+					extra.setCorePoolSize(extra.getCorePoolSize() - 1);
+				}
+				
+				if (lastEx != null) {
+					throw new RuntimeException(lastEx);
 				}
 			}
-		});
+		};
+	}
+	private <T> Collection<? extends Callable<T>> getHandlerWrapper(Collection<? extends Callable<T>> tasks) {
+		List<Callable<T>> retVal = new ArrayList<Callable<T>>();
 		
-		// Set the factory
-		retVal.setThreadFactory(threadFactory);
+		for (Callable<T> task : tasks) {
+			retVal.add(getHandlerWrapper(task));
+		}
 		
 		return retVal;
 	}

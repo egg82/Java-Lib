@@ -2,6 +2,7 @@ package ninja.egg82.exceptionHandlers;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Handler;
@@ -19,7 +20,6 @@ import ninja.egg82.exceptions.ArgumentNullException;
 import ninja.egg82.patterns.DynamicObjectPool;
 import ninja.egg82.patterns.IObjectPool;
 import ninja.egg82.patterns.tuples.Pair;
-import ninja.egg82.utils.ThreadUtil;
 
 public class RollbarExceptionHandler extends Handler implements IExceptionHandler {
 	//vars
@@ -78,7 +78,7 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 			}
 		}
 		
-		threadPool = ThreadUtil.createSingleScheduledPool(new ThreadFactoryBuilder().setNameFormat(threadName + "-Rollbar_Exception-%d").build());
+		threadPool = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setNameFormat(threadName + "-Rollbar_Exception-%d").build());
 		threadPool.scheduleAtFixedRate(onCleanupThread, 60L * 1000L, 60L * 1000L, TimeUnit.MILLISECONDS);
 		threadPool.scheduleAtFixedRate(onResendThread, 10L * 60L * 1000L, 10L * 60L * 1000L, TimeUnit.MILLISECONDS);
 	}
