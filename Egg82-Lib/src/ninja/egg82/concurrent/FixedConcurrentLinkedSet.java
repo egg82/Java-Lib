@@ -2,15 +2,15 @@ package ninja.egg82.concurrent;
 
 import java.util.Collection;
 
-import ninja.egg82.core.BackingConcurrentHashSet;
+import ninja.egg82.core.BackingConcurrentLinkedHashSet;
 
-public class FixedConcurrentSet<T> extends BackingConcurrentHashSet<T> implements IConcurrentSet<T> {
+public class FixedConcurrentLinkedSet<T> extends BackingConcurrentLinkedHashSet<T> implements IConcurrentSet<T> {
 	//vars
-	private static final long serialVersionUID = 2756891575591440938L;
+	private static final long serialVersionUID = 7451789826200107978L;
 	private int capacity = 0;
 	
 	//constructor
-	public FixedConcurrentSet(int capacity) {
+	public FixedConcurrentLinkedSet(int capacity) {
 		this.capacity = capacity;
 	}
 	

@@ -1,31 +1,32 @@
 package ninja.egg82.patterns.registries;
 
 import java.lang.reflect.Array;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
 
 import ninja.egg82.exceptions.ArgumentNullException;
 import ninja.egg82.patterns.tuples.Unit;
 import ninja.egg82.patterns.tuples.pair.Pair;
 import ninja.egg82.utils.ReflectUtil;
 
-public class VariableRegistry<K> implements IVariableRegistry<K> {
+public class VariableLinkedRegistry<K> implements IVariableRegistry<K> {
 	//vars
 	private Class<K> keyClass = null;
 	private K[] keyCache = null;
 	private AtomicBoolean keysDirty = new AtomicBoolean(false);
-	private ConcurrentMap<K, Pair<Class<?>, Unit<Object>>> registry = new ConcurrentHashMap<K, Pair<Class<?>, Unit<Object>>>();
-	private ConcurrentMap<Unit<Object>, K> reverseRegistry = new ConcurrentHashMap<Unit<Object>, K>();
+	private ConcurrentLinkedHashMap<K, Pair<Class<?>, Unit<Object>>> registry = new ConcurrentLinkedHashMap.Builder<K, Pair<Class<?>, Unit<Object>>>().maximumWeightedCapacity(Integer.MAX_VALUE).build();
+	private ConcurrentMap<Unit<Object>, K> reverseRegistry = new ConcurrentLinkedHashMap.Builder<Unit<Object>, K>().maximumWeightedCapacity(Integer.MAX_VALUE).build();
 	
 	//constructor
 	@SuppressWarnings("unchecked")
-	public VariableRegistry(Class<K> keyClass) {
+	public VariableLinkedRegistry(Class<K> keyClass) {
 		this.keyClass = keyClass;
 		keyCache = (K[]) Array.newInstance(keyClass, 0);
 	}
 	@SuppressWarnings("unchecked")
-	public VariableRegistry(K[] keyArray) {
+	public VariableLinkedRegistry(K[] keyArray) {
 		this.keyClass = (Class<K>) keyArray.getClass().getComponentType();
 		keyCache = (K[]) Array.newInstance(keyClass, 0);
 	}
@@ -174,7 +175,7 @@ public class VariableRegistry<K> implements IVariableRegistry<K> {
 	@SuppressWarnings("unchecked")
 	public final K[] getKeys() {
 		if (keysDirty.getAndSet(false)) {
-			keyCache = registry.keySet().toArray((K[]) Array.newInstance(keyClass, 0));
+			keyCache = registry.ascendingKeySet().toArray((K[]) Array.newInstance(keyClass, 0));
 		}
 		return keyCache.clone();
 	}

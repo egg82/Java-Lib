@@ -1,8 +1,8 @@
 package ninja.egg82.concurrent;
 
-import java.util.concurrent.ConcurrentSkipListSet;
+import ninja.egg82.core.BackingConcurrentHashSet;
 
-public class DynamicConcurrentSet<T> extends ConcurrentSkipListSet<T> implements IConcurrentSet<T> {
+public class DynamicConcurrentSet<T> extends BackingConcurrentHashSet<T> implements IConcurrentSet<T> {
 	//vars
 	private static final long serialVersionUID = 4002682950853337773L;
 	

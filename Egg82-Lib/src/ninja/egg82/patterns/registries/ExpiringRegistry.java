@@ -2,6 +2,7 @@ package ninja.egg82.patterns.registries;
 
 import java.lang.reflect.Array;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -20,7 +21,7 @@ public class ExpiringRegistry<K, V> implements IExpiringRegistry<K, V> {
 	private K[] keyCache = null;
 	private AtomicBoolean keysDirty = new AtomicBoolean(false);
 	private ExpiringMap<K, Unit<V>> registry = null;
-	private ConcurrentHashMap<Unit<V>, K> reverseRegistry = new ConcurrentHashMap<Unit<V>, K>();
+	private ConcurrentMap<Unit<V>, K> reverseRegistry = new ConcurrentHashMap<Unit<V>, K>();
 	
 	private final EventHandler<ExpireEventArgs<K, V>> expire = new EventHandler<ExpireEventArgs<K, V>>();
 	
