@@ -1,29 +1,30 @@
-package ninja.egg82.patterns;
+package ninja.egg82.patterns.registries;
 
 import java.lang.reflect.Array;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import ninja.egg82.exceptions.ArgumentNullException;
-import ninja.egg82.patterns.tuples.Pair;
 import ninja.egg82.patterns.tuples.Unit;
+import ninja.egg82.patterns.tuples.pair.Pair;
 import ninja.egg82.utils.ReflectUtil;
 
-public class Registry<K> implements IRegistry<K> {
+public class VariableRegistry<K> implements IVariableRegistry<K> {
 	//vars
 	private Class<K> keyClass = null;
 	private K[] keyCache = null;
-	private volatile boolean keysDirty = false;
+	private AtomicBoolean keysDirty = new AtomicBoolean(false);
 	private ConcurrentHashMap<K, Pair<Class<?>, Unit<Object>>> registry = new ConcurrentHashMap<K, Pair<Class<?>, Unit<Object>>>();
 	private ConcurrentHashMap<Unit<Object>, K> reverseRegistry = new ConcurrentHashMap<Unit<Object>, K>();
 	
 	//constructor
 	@SuppressWarnings("unchecked")
-	public Registry(Class<K> keyClass) {
+	public VariableRegistry(Class<K> keyClass) {
 		this.keyClass = keyClass;
 		keyCache = (K[]) Array.newInstance(keyClass, 0);
 	}
 	@SuppressWarnings("unchecked")
-	public Registry(K[] keyArray) {
+	public VariableRegistry(K[] keyArray) {
 		this.keyClass = (Class<K>) keyArray.getClass().getComponentType();
 		keyCache = (K[]) Array.newInstance(keyClass, 0);
 	}
@@ -40,7 +41,7 @@ public class Registry<K> implements IRegistry<K> {
 		
 		if (pair == null) {
 			// Key didn't exist before. Added.
-			keysDirty = true;
+			keysDirty.set(true);
 		} else {
 			// Key existed before. Need to remove old value->key from reverse registry.
 			reverseRegistry.remove(pair.getRight());
@@ -57,7 +58,7 @@ public class Registry<K> implements IRegistry<K> {
 		if (pair != null) {
 			registry.remove(key);
 			reverseRegistry.remove(pair.getRight());
-			keysDirty = true;
+			keysDirty.set(true);
 			return pair.getRight().getType();
 		}
 		return null;
@@ -72,7 +73,7 @@ public class Registry<K> implements IRegistry<K> {
 		if (pair != null) {
 			registry.remove(key);
 			reverseRegistry.remove(pair.getRight());
-			keysDirty = true;
+			keysDirty.set(true);
 			
 			if (pair.getRight().getType() == null) {
 				return null;
@@ -166,14 +167,13 @@ public class Registry<K> implements IRegistry<K> {
 		registry.clear();
 		reverseRegistry.clear();
 		keyCache = (K[]) Array.newInstance(keyClass, 0);
-		keysDirty = false;
+		keysDirty.set(false);
 	}
 	
 	@SuppressWarnings("unchecked")
 	public final K[] getKeys() {
-		if (keysDirty) {
+		if (keysDirty.getAndSet(false)) {
 			keyCache = registry.keySet().toArray((K[]) Array.newInstance(keyClass, 0));
-			keysDirty = false;
 		}
 		return keyCache.clone();
 	}

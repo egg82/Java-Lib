@@ -2,9 +2,9 @@ package ninja.egg82.core;
 
 public class SQLData {
 	//vars
-	public String[] columns = null;
-	public Object[][] data = null;
-	public int recordsAffected = -1;
+	public volatile String[] columns = null;
+	public volatile Object[][] data = null;
+	public volatile int recordsAffected = -1;
 	
 	//constructor
 	public SQLData() {

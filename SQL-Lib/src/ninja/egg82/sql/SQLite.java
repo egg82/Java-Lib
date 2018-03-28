@@ -28,15 +28,15 @@ import org.apache.commons.lang.NotImplementedException;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import ninja.egg82.concurrent.DynamicConcurrentDeque;
+import ninja.egg82.concurrent.FixedConcurrentDeque;
+import ninja.egg82.concurrent.IConcurrentDeque;
 import ninja.egg82.core.NamedParameterStatement;
 import ninja.egg82.core.SQLData;
 import ninja.egg82.core.SQLError;
 import ninja.egg82.core.SQLQueueData;
 import ninja.egg82.enums.SQLType;
 import ninja.egg82.events.SQLEventArgs;
-import ninja.egg82.patterns.DynamicObjectPool;
-import ninja.egg82.patterns.FixedObjectPool;
-import ninja.egg82.patterns.IObjectPool;
 import ninja.egg82.patterns.events.EventArgs;
 import ninja.egg82.patterns.events.EventHandler;
 import ninja.egg82.utils.FileUtil;
@@ -52,14 +52,12 @@ public class SQLite implements ISQL {
 	private final EventHandler<SQLEventArgs> error = new EventHandler<SQLEventArgs>();
 	
 	// free DB connection pool, where connections are taken from
-	private IObjectPool<Connection> freeConnections = null;
+	private IConcurrentDeque<Connection> freeConnections = null;
 	// used DB connection pool, where connections are added while in use
-	private IObjectPool<Connection> usedConnections = new DynamicObjectPool<Connection>();
+	private IConcurrentDeque<Connection> usedConnections = new DynamicConcurrentDeque<Connection>();
 	
 	// Query backlog/queue - for queuing queries and ensuring data consistency
-	private IObjectPool<SQLQueueData> backlog = new DynamicObjectPool<SQLQueueData>();
-	// Object pool for storing "dead" query data - so we don't re-create a new data object for every query
-	private IObjectPool<SQLQueueData> queueDataPool = new DynamicObjectPool<SQLQueueData>();
+	private IConcurrentDeque<SQLQueueData> backlog = new DynamicConcurrentDeque<SQLQueueData>();
 	
 	// Thread pool for query threads. Pool size determined by constructor
 	private ScheduledExecutorService threadPool = null;
@@ -71,6 +69,8 @@ public class SQLite implements ISQL {
 	// Connected state. Atomic because multithreading is HARD
 	private AtomicBoolean connected = new AtomicBoolean(false);
 	
+	// Double-lock, preventing race conditions in a multi-threaded environment
+	private static Lock objLock = new ReentrantLock();
 	// Connection method for the SQL driver, since we use a class loader for the SQL connections
 	private volatile static Method m = null;
 	// Class loader for SQL connections. Default is system, but may change depending
@@ -88,11 +88,12 @@ public class SQLite implements ISQL {
 		if (numConnections < 2) {
 			numConnections = 2;
 		}
-		freeConnections = new FixedObjectPool<Connection>(numConnections);
+		freeConnections = new FixedConcurrentDeque<Connection>(numConnections);
 		
 		this.threadName = threadName;
 		
 		// Check to see if SQLite is loaded
+		objLock.lock();
 		if (m == null || loader == null) {
 			boolean good = false;
 			
@@ -137,6 +138,7 @@ public class SQLite implements ISQL {
 				}
 			}
 		}
+		objLock.unlock();
 	}
 	public void finalize() {
 		// Shutdown with garbage collection. This should never really happen, but hey.
@@ -171,7 +173,7 @@ public class SQLite implements ISQL {
 		}
 		
 		// Connect to the database
-		while (freeConnections.remainingCapacity() > 0) {
+		while (freeConnections.getRemainingCapacity() > 0) {
 			try {
 				freeConnections.add((Connection) m.invoke(null, "jdbc:sqlite:" + filePath, new Properties(), Class.forName("org.sqlite.JDBC", true, loader)));
 			} catch (Exception ex) {
@@ -207,7 +209,7 @@ public class SQLite implements ISQL {
 		
 		// Kill connections in use (hopefully zero)
 		while (!usedConnections.isEmpty()) {
-			Connection conn = usedConnections.popLast();
+			Connection conn = usedConnections.pollLast();
 			
 			if (conn != null) {
 				// Close the connection gracefully
@@ -222,7 +224,7 @@ public class SQLite implements ISQL {
 		}
 		// Kill connections not in use
 		while (!freeConnections.isEmpty()) {
-			Connection conn = freeConnections.popLast();
+			Connection conn = freeConnections.pollLast();
 			
 			if (conn != null) {
 				// Close the connection gracefully
@@ -284,19 +286,8 @@ public class SQLite implements ISQL {
 		
 		UUID u = UUID.randomUUID();
 		
-		// Grab a new data object if we can. Pop the last instead of the first so we don't need to re-order the entire array
-		SQLQueueData queryData = queueDataPool.popLast();
-		
-		if (queryData == null) {
-			// We ran out of queue space. We'll create one
-			queryData = new SQLQueueData();
-		}
-		
-		// Set the new data and add it to the send queue
-		queryData.setQuery(q);
-		queryData.setUnnamedParams(queryParams);
-		queryData.setUuid(u);
-		queryData.setParallel(parallel);
+		// Grab a new data object and add it to the send queue
+		SQLQueueData queryData = new SQLQueueData(u, q, queryParams, parallel);
 		backlog.add(queryData);
 		
 		// Are we connected?
@@ -317,19 +308,8 @@ public class SQLite implements ISQL {
 		
 		UUID u = UUID.randomUUID();
 		
-		// Grab a new data object if we can. Pop the last instead of the first so we don't need to re-order the entire array
-		SQLQueueData queryData = queueDataPool.popLast();
-		
-		if (queryData == null) {
-			// We ran out of queue space. We'll create one
-			queryData = new SQLQueueData();
-		}
-		
-		// Set the new data and add it to the send queue
-		queryData.setQuery(q);
-		queryData.setNamedParams(namedQueryParams);
-		queryData.setUuid(u);
-		queryData.setParallel(parallel);
+		// Grab a new data object and add it to the send queue
+		SQLQueueData queryData = new SQLQueueData(u, q, namedQueryParams, parallel);
 		backlog.add(queryData);
 		
 		// Are we connected?
@@ -341,10 +321,11 @@ public class SQLite implements ISQL {
 		return u;
 	}
 	
+	@SuppressWarnings("resource")
 	private Runnable onSendThread = new Runnable() {
 		public void run() {
 			// Grab a new connection from the free pool. We grab the first to ensure rotation
-			Connection conn = freeConnections.popFirst();
+			Connection conn = freeConnections.pollFirst();
 			if (conn == null) {
 				// No free connections left
 				return;
@@ -355,6 +336,7 @@ public class SQLite implements ISQL {
 			sendNext(conn);
 		}
 	};
+	@SuppressWarnings("resource")
 	private Runnable onBacklogThread = new Runnable() {
 		public void run() {
 			// Check connection state and backlog count
@@ -363,7 +345,7 @@ public class SQLite implements ISQL {
 			}
 			
 			// Grab a new connection from the free pool. We grab the first to ensure rotation
-			Connection conn = freeConnections.popFirst();
+			Connection conn = freeConnections.pollFirst();
 			if (conn == null) {
 				// No free connections left
 				return;
@@ -375,6 +357,7 @@ public class SQLite implements ISQL {
 		}
 	};
 	
+	@SuppressWarnings("resource")
 	private void sendNext(Connection conn) {
 		if (!connected.get()) {
 			// We're no longer connected
@@ -391,7 +374,7 @@ public class SQLite implements ISQL {
 		}
 		
 		// Grab the oldest data first
-		SQLQueueData first = backlog.popFirst();
+		SQLQueueData first = backlog.pollFirst();
 		if (first == null) {
 			// Data is null, which means we reached the end of the queue
 			usedConnections.remove(conn);
@@ -446,12 +429,14 @@ public class SQLite implements ISQL {
 			Map<String, Object> namedParams = first.getNamedParams();
 			UUID uuid = first.getUuid();
 			
-			// Clear the container object and add it back to the data pool
-			first.clear();
-			queueDataPool.add(first);
-			
 			// Execute the new statement
 			execute(conn, command.getPreparedStatement(), parallel, query, null, namedParams, uuid);
+			// Release resources
+			try {
+				command.close();
+			} catch (Exception ex) {
+				
+			}
 		} else {
 			// The prepared statement to use
 			PreparedStatement command = null;
@@ -493,15 +478,18 @@ public class SQLite implements ISQL {
 			Object[] params = first.getUnnamedParams();
 			UUID uuid = first.getUuid();
 			
-			// Clear the container object and add it back to the data pool
-			first.clear();
-			queueDataPool.add(first);
-			
 			// Execute the new statement
 			execute(conn, command, parallel, query, params, null, uuid);
+			// Release resources
+			try {
+				command.close();
+			} catch (Exception ex) {
+				
+			}
 		}
 	}
 	
+	@SuppressWarnings("resource")
 	private void execute(Connection conn, PreparedStatement command, boolean isParallel, String q, Object[] parameters, Map<String, Object> namedParameters, UUID u) {
 		// Try to execute the statement
 		try {
@@ -513,20 +501,8 @@ public class SQLite implements ISQL {
 					return;
 				}
 				
-				// Grab a new data object if we can. Pop the last instead of the first so we don't need to re-order the entire array
-				SQLQueueData queryData = queueDataPool.popLast();
-				
-				if (queryData == null) {
-					// We ran out of queue space. We'll create one
-					queryData = new SQLQueueData();
-				}
-				
-				// Set the new data and add it to the beginning of the send queue (preserving order)
-				queryData.setQuery(q);
-				queryData.setUnnamedParams(parameters);
-				queryData.setNamedParams(namedParameters);
-				queryData.setUuid(u);
-				queryData.setParallel(isParallel);
+				// Grab a new data object and add it to the beginning of the send queue (preserving order)
+				SQLQueueData queryData = new SQLQueueData(u, q, namedParameters, parameters, isParallel);
 				backlog.addFirst(queryData);
 				
 				// Unlock the parallel lock if it's currently locked, BEFORE we create a new send thread
@@ -541,7 +517,6 @@ public class SQLite implements ISQL {
 				usedConnections.remove(conn);
 				conn = reconnect(conn);
 				freeConnections.add(conn);
-				return;
 			} else {
 				// Errored on execution, invoke the error method and try sending the next item in the queue
 				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
@@ -549,8 +524,9 @@ public class SQLite implements ISQL {
 					parallelLock.unlock();
 				}
 				sendNext(conn);
-				return;
 			}
+			
+			return;
 		}
 		
 		// Create the return data object
@@ -661,7 +637,7 @@ public class SQLite implements ISQL {
 						}
 						tData.add(tVals);
 					}
-				};
+				}
 			} catch (Exception ex) {
 				// Errored, invoke the error method and try sending the next item in the queue
 				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
@@ -753,9 +729,7 @@ public class SQLite implements ISQL {
 			URL url = null;
 			try {
 				File d = new File(file.getParent());
-	    		if (d != null) {
-	    			d.mkdirs();
-	    		}
+	    		d.mkdirs();
 				
 	    		// Download the jar
 				url = new URL(SQLITE_JAR);

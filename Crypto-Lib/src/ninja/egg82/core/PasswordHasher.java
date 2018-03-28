@@ -6,15 +6,16 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Arrays;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Generates and verifies password hashes.
  */
 public final class PasswordHasher {
 
-  private static final Logger logger = Logger.getLogger("ninja.egg82.core.PasswordHasher");
+  private static final Logger logger = LoggerFactory.getLogger(PasswordHasher.class);
 
   /**
    * Non-standard compliant Base64 character mapping.
@@ -40,7 +41,7 @@ public final class PasswordHasher {
     try {
       messageDigest = MessageDigest.getInstance("SHA-512");
     } catch (NoSuchAlgorithmException e) {
-      logger.log(Level.SEVERE, "Could not create a SHA-512 digest.");
+      logger.error("Could not create a SHA-512 digest.");
     }
   }
 

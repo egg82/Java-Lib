@@ -1,6 +1,6 @@
-package ninja.egg82.patterns;
+package ninja.egg82.patterns.registries;
 
-public interface IRegistry<K> {
+public interface IVariableRegistry<K> {
 	//functions
 	void setRegister(K key, Object data);
 	Object removeRegister(K key);

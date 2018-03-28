@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -14,12 +15,12 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.rollbar.Rollbar;
 import com.rollbar.payload.data.Person;
 
+import ninja.egg82.concurrent.DynamicConcurrentDeque;
+import ninja.egg82.concurrent.IConcurrentDeque;
 import ninja.egg82.core.LoggingRollbarResponseHandler;
 import ninja.egg82.exceptionHandlers.builders.IBuilder;
 import ninja.egg82.exceptions.ArgumentNullException;
-import ninja.egg82.patterns.DynamicObjectPool;
-import ninja.egg82.patterns.IObjectPool;
-import ninja.egg82.patterns.tuples.Pair;
+import ninja.egg82.patterns.tuples.pair.Int2Pair;
 
 public class RollbarExceptionHandler extends Handler implements IExceptionHandler {
 	//vars
@@ -27,7 +28,7 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	private LoggingRollbarResponseHandler responseHandler = new LoggingRollbarResponseHandler();
 	
 	private ScheduledExecutorService threadPool = null;
-	private IObjectPool<Thread> errorThreads = new DynamicObjectPool<Thread>();
+	private IConcurrentDeque<Thread> errorThreads = new DynamicConcurrentDeque<Thread>();
 	
 	//constructor
 	public RollbarExceptionHandler() {
@@ -45,9 +46,9 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 		rollbar = new Rollbar(params[0], params[1]).codeVersion(params[2]).responseHandler(responseHandler).person(new Person(params[3]));
 		handleUncaughtErrors(Thread.currentThread());
 		
-		List<Pair<LogRecord, Integer>> records = responseHandler.getUnsentLogs();
+		List<Int2Pair<LogRecord>> records = responseHandler.getUnsentLogs();
 		responseHandler.clearLogs();
-		for (Pair<LogRecord, Integer> record : records) {
+		for (Int2Pair<LogRecord> record : records) {
 			rewriteFilename(record.getLeft());
 			responseHandler.setLastLog(record.getLeft());
 			responseHandler.setTries(record.getRight());
@@ -65,9 +66,9 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 				}
 			}
 		}
-		List<Pair<Exception, Integer>> exceptions = responseHandler.getUnsentExceptions();
+		List<Int2Pair<Exception>> exceptions = responseHandler.getUnsentExceptions();
 		responseHandler.clearExceptions();
-		for (Pair<Exception, Integer> ex : exceptions) {
+		for (Int2Pair<Exception> ex : exceptions) {
 			rewriteFilename(ex.getLeft());
 			responseHandler.setLastException(ex.getLeft());
 			responseHandler.setTries(ex.getRight());
@@ -159,19 +160,19 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	
 	public List<Exception> getUnsentExceptions() {
 		ArrayList<Exception> retVal = new ArrayList<Exception>();
-		List<Pair<Exception, Integer>> logs = responseHandler.getUnsentExceptions();
-		logs.forEach((v) -> {
-			retVal.add(v.getLeft());
-		});
+		List<Int2Pair<Exception>> exceptions = responseHandler.getUnsentExceptions();
+		for (Int2Pair<Exception> ex : exceptions) {
+			retVal.add(ex.getLeft());
+		}
 		return retVal;
 	}
 	public void setUnsentExceptions(List<Exception> list) {
 		responseHandler.setUnsentExceptions(list);
 		
 		if (rollbar != null) {
-			List<Pair<Exception, Integer>> exceptions = responseHandler.getUnsentExceptions();
+			List<Int2Pair<Exception>> exceptions = responseHandler.getUnsentExceptions();
 			responseHandler.clearExceptions();
-			for (Pair<Exception, Integer> ex : exceptions) {
+			for (Int2Pair<Exception> ex : exceptions) {
 				rewriteFilename(ex.getLeft());
 				responseHandler.setLastException(ex.getLeft());
 				responseHandler.setTries(ex.getRight());
@@ -185,19 +186,19 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	}
 	public List<LogRecord> getUnsentLogs() {
 		ArrayList<LogRecord> retVal = new ArrayList<LogRecord>();
-		List<Pair<LogRecord, Integer>> logs = responseHandler.getUnsentLogs();
-		logs.forEach((v) -> {
-			retVal.add(v.getLeft());
-		});
+		List<Int2Pair<LogRecord>> logs = responseHandler.getUnsentLogs();
+		for (Int2Pair<LogRecord> log : logs) {
+			retVal.add(log.getLeft());
+		}
 		return retVal;
 	}
 	public void setUnsentLogs(List<LogRecord> list) {
 		responseHandler.setUnsentLogs(list);
 		
 		if (rollbar != null) {
-			List<Pair<LogRecord, Integer>> records = responseHandler.getUnsentLogs();
+			List<Int2Pair<LogRecord>> records = responseHandler.getUnsentLogs();
 			responseHandler.clearLogs();
-			for (Pair<LogRecord, Integer> record : records) {
+			for (Int2Pair<LogRecord> record : records) {
 				rewriteFilename(record.getLeft());
 				responseHandler.setLastLog(record.getLeft());
 				responseHandler.setTries(record.getRight());
@@ -266,9 +267,9 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	
 	private Runnable onResendThread = new Runnable() {
 		public void run() {
-			List<Pair<LogRecord, Integer>> records = responseHandler.getUnsentLogs();
+			List<Int2Pair<LogRecord>> records = responseHandler.getUnsentLogs();
 			responseHandler.clearLogs();
-			for (Pair<LogRecord, Integer> record : records) {
+			for (Int2Pair<LogRecord> record : records) {
 				rewriteFilename(record.getLeft());
 				responseHandler.setLastLog(record.getLeft());
 				responseHandler.setTries(record.getRight());
@@ -286,9 +287,9 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 					}
 				}
 			}
-			List<Pair<Exception, Integer>> exceptions = responseHandler.getUnsentExceptions();
+			List<Int2Pair<Exception>> exceptions = responseHandler.getUnsentExceptions();
 			responseHandler.clearExceptions();
-			for (Pair<Exception, Integer> ex : exceptions) {
+			for (Int2Pair<Exception> ex : exceptions) {
 				rewriteFilename(ex.getLeft());
 				responseHandler.setLastException(ex.getLeft());
 				responseHandler.setTries(ex.getRight());
@@ -302,7 +303,12 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	};
 	private Runnable onCleanupThread = new Runnable() {
 		public void run() {
-			errorThreads.removeIf((v) -> (!v.isAlive()));
+			errorThreads.removeIf(cleanupPredicate);
+		}
+	};
+	private Predicate<? super Thread> cleanupPredicate = new Predicate<Thread>() {
+		public boolean test(Thread t) {
+			return !t.isAlive();
 		}
 	};
 	

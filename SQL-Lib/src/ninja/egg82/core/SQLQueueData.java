@@ -5,59 +5,42 @@ import java.util.UUID;
 
 public class SQLQueueData {
 	//vars
-	private volatile String query = null;
-	private volatile Map<String, Object> namedParams = null;
-	private volatile Object[] unnamedParams = null;
-	private volatile UUID uuid = null;
-	private volatile boolean parallel = false;
+	private String query = null;
+	private Map<String, Object> namedParams = null;
+	private Object[] unnamedParams = null;
+	private UUID uuid = null;
+	private boolean parallel = false;
 	
 	//constructor
-	public SQLQueueData() {
-		
+	public SQLQueueData(UUID uuid, String query, Map<String, Object> namedParams, boolean parallel) {
+		this(uuid, query, namedParams, null, parallel);
+	}
+	public SQLQueueData(UUID uuid, String query, Object[] unnamedParams, boolean parallel) {
+		this(uuid, query, null, unnamedParams, parallel);
+	}
+	public SQLQueueData(UUID uuid, String query, Map<String, Object> namedParams, Object[] unnamedParams, boolean parallel) {
+		this.uuid = uuid;
+		this.query = query;
+		this.namedParams = namedParams;
+		this.unnamedParams = unnamedParams;
+		this.parallel = parallel;
 	}
 	
 	//public
 	public String getQuery() {
 		return query;
 	}
-	public void setQuery(String query) {
-		this.query = query;
-	}
-	
 	public Map<String, Object> getNamedParams() {
 		return namedParams;
 	}
-	public void setNamedParams(Map<String, Object> namedParams) {
-		this.namedParams = namedParams;
-	}
-	
 	public Object[] getUnnamedParams() {
 		return unnamedParams;
 	}
-	public void setUnnamedParams(Object[] unnamedParams) {
-		this.unnamedParams = unnamedParams;
-	}
-	
 	public UUID getUuid() {
 		return uuid;
 	}
-	public void setUuid(UUID uuid) {
-		this.uuid = uuid;
-	}
-	
 	public boolean getParallel() {
 		return parallel;
-	}
-	public void setParallel(boolean parallel) {
-		this.parallel = parallel;
-	}
-	
-	public void clear() {
-		this.query = null;
-		this.namedParams = null;
-		this.unnamedParams = null;
-		this.uuid = null;
-		this.parallel = false;
 	}
 	
 	//private

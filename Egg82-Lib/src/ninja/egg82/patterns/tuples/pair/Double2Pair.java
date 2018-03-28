@@ -1,16 +1,16 @@
-package ninja.egg82.patterns.tuples;
+package ninja.egg82.patterns.tuples.pair;
 
 import org.apache.commons.lang.builder.HashCodeBuilder;
 
 import ninja.egg82.utils.ReflectUtil;
 
-public final class Pair<L, R> {
+public final class Double2Pair<L> {
 	//vars
 	private volatile L left = null;
-	private volatile R right = null;
+	private volatile double right = 0.0d;
 	
 	//constructor
-	public Pair(L left, R right) {
+	public Double2Pair(L left, double right) {
 		this.left = left;
 		this.right = right;
 	}
@@ -22,10 +22,10 @@ public final class Pair<L, R> {
 	public void setLeft(L left) {
 		this.left = left;
 	}
-	public R getRight() {
+	public double getRight() {
 		return right;
 	}
-	public void setRight(R right) {
+	public void setRight(double right) {
 		this.right = right;
 	}
 	
@@ -40,12 +40,11 @@ public final class Pair<L, R> {
 			return false;
 		}
 		
-		Pair<?, ?> p = (Pair<?, ?>) obj;
+		Double2Pair<?> p = (Double2Pair<?>) obj;
 		final Object l = p.left;
-		final Object r = p.right;
 		if (
 			((l == null && left == null) || (l != null && l.equals(left)))
-			&& ((r == null && right == null) || (r != null && r.equals(right)))
+			&& (p.right == right)
 		) {
 			return true;
 		}

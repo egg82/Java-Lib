@@ -8,14 +8,14 @@ import com.rollbar.sender.RollbarResponse;
 import com.rollbar.sender.RollbarResponseCode;
 import com.rollbar.sender.RollbarResponseHandler;
 
-import ninja.egg82.patterns.DynamicObjectPool;
-import ninja.egg82.patterns.IObjectPool;
-import ninja.egg82.patterns.tuples.Pair;
+import ninja.egg82.concurrent.DynamicConcurrentDeque;
+import ninja.egg82.concurrent.IConcurrentDeque;
+import ninja.egg82.patterns.tuples.pair.Int2Pair;
 
 public class LoggingRollbarResponseHandler implements RollbarResponseHandler {
 	//vars
-	private IObjectPool<Pair<LogRecord, Integer>> logs = new DynamicObjectPool<Pair<LogRecord, Integer>>();
-	private IObjectPool<Pair<Exception, Integer>> exceptions = new DynamicObjectPool<Pair<Exception, Integer>>();
+	private IConcurrentDeque<Int2Pair<LogRecord>> logs = new DynamicConcurrentDeque<Int2Pair<LogRecord>>();
+	private IConcurrentDeque<Int2Pair<Exception>> exceptions = new DynamicConcurrentDeque<Int2Pair<Exception>>();
 	
 	private volatile Exception lastException = null;
 	private volatile int tries = 0;
@@ -35,19 +35,19 @@ public class LoggingRollbarResponseHandler implements RollbarResponseHandler {
 				limitReached = true;
 				
 				if (lastException != null) {
-					exceptions.add(new Pair<Exception, Integer>(lastException, tries));
+					exceptions.add(new Int2Pair<Exception>(lastException, tries));
 					lastException = null;
 				} else if (lastLog != null) {
-					logs.add(new Pair<LogRecord, Integer>(lastLog, tries));
+					logs.add(new Int2Pair<LogRecord>(lastLog, tries));
 					lastLog = null;
 				}
 			} else {
 				if (tries < 1) {
 					if (lastException != null) {
-						exceptions.add(new Pair<Exception, Integer>(new Exception(lastException), tries + 1));
+						exceptions.add(new Int2Pair<Exception>(new Exception(lastException), tries + 1));
 						lastException = null;
 					} else if (lastLog != null) {
-						logs.add(new Pair<LogRecord, Integer>(lastLog, tries + 1));
+						logs.add(new Int2Pair<LogRecord>(lastLog, tries + 1));
 						lastLog = null;
 					}
 				}
@@ -55,30 +55,30 @@ public class LoggingRollbarResponseHandler implements RollbarResponseHandler {
 		}
 	}
 	
-	public List<Pair<Exception, Integer>> getUnsentExceptions() {
-		return new ArrayList<Pair<Exception, Integer>>(exceptions);
+	public List<Int2Pair<Exception>> getUnsentExceptions() {
+		return new ArrayList<Int2Pair<Exception>>(exceptions);
 	}
 	public void setUnsentExceptions(List<Exception> list) {
 		exceptions.clear();
-		list.forEach((v) -> {
-			exceptions.add(new Pair<Exception, Integer>(v, 0));
-		});
+		for (Exception ex : list) {
+			exceptions.add(new Int2Pair<Exception>(ex, 0));
+		}
 	}
-	public List<Pair<LogRecord, Integer>> getUnsentLogs() {
-		return new ArrayList<Pair<LogRecord, Integer>>(logs);
+	public List<Int2Pair<LogRecord>> getUnsentLogs() {
+		return new ArrayList<Int2Pair<LogRecord>>(logs);
 	}
 	public void setUnsentLogs(List<LogRecord> list) {
 		logs.clear();
-		list.forEach((v) -> {
-			logs.add(new Pair<LogRecord, Integer>(v, 0));
-		});
+		for (LogRecord log : list) {
+			logs.add(new Int2Pair<LogRecord>(log, 0));
+		}
 	}
 	
 	public void addLog(LogRecord log) {
-		logs.add(new Pair<LogRecord, Integer>(log, 0));
+		logs.add(new Int2Pair<LogRecord>(log, 0));
 	}
 	public void addException(Exception ex) {
-		exceptions.add(new Pair<Exception, Integer>(ex, 0));
+		exceptions.add(new Int2Pair<Exception>(ex, 0));
 	}
 	
 	public void setLastException(Exception ex) {

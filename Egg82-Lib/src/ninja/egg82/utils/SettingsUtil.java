@@ -4,7 +4,7 @@ import java.nio.charset.Charset;
 
 import org.json.JSONObject;
 
-import ninja.egg82.patterns.IRegistry;
+import ninja.egg82.patterns.registries.IVariableRegistry;
 
 public final class SettingsUtil {
     //vars
@@ -15,10 +15,10 @@ public final class SettingsUtil {
     }
     
     //public
-    public static void load(String path, IRegistry<String> registry) throws Exception {
+    public static void load(String path, IVariableRegistry<String> registry) throws Exception {
     	load(path, registry, FileUtil.UTF_8);
     }
-    public static void load(String path, IRegistry<String> registry, Charset enc) throws Exception {
+    public static void load(String path, IVariableRegistry<String> registry, Charset enc) throws Exception {
     	if (!FileUtil.pathExists(path)) {
     		throw new RuntimeException("path does not exist.");
     	}
@@ -34,7 +34,7 @@ public final class SettingsUtil {
     	}
     	
     	int totalBytes = ((FileUtil.getTotalBytes(path) > Integer.MAX_VALUE) ? Integer.MAX_VALUE : (int) FileUtil.getTotalBytes(path));
-        String str = new String(FileUtil.read(path, 0L, (long) totalBytes), enc).replaceAll("\r", "").replaceAll("\n", "");
+        String str = new String(FileUtil.read(path, 0L, totalBytes), enc).replaceAll("\r", "").replaceAll("\n", "");
         
         if (!fileWasOpen) {
         	FileUtil.close(path);
@@ -52,15 +52,13 @@ public final class SettingsUtil {
             throw new RuntimeException("Cannot create JSON object.", ex);
         }
         
-        if (json != null) {
-            setRegistry(json, registry);
-        }
+        setRegistry(json, registry);
     }
     
-    public static void save(String path, IRegistry<String> registry) throws Exception {
+    public static void save(String path, IVariableRegistry<String> registry) throws Exception {
     	save(path, registry, FileUtil.UTF_8);
     }
-    public static void save(String path, IRegistry<String> registry, Charset enc) throws Exception {
+    public static void save(String path, IVariableRegistry<String> registry, Charset enc) throws Exception {
     	if (FileUtil.pathExists(path)) {
     		if (!FileUtil.pathIsFile(path)) {
     			throw new RuntimeException("path is not a file.");
@@ -92,10 +90,10 @@ public final class SettingsUtil {
         }
     }
     
-    public static void loadSave(String path, IRegistry<String> registry) throws Exception {
+    public static void loadSave(String path, IVariableRegistry<String> registry) throws Exception {
         loadSave(path, registry, FileUtil.UTF_8);
     }
-    public static void loadSave(String path, IRegistry<String> registry, Charset enc) throws Exception {
+    public static void loadSave(String path, IVariableRegistry<String> registry, Charset enc) throws Exception {
     	if (!FileUtil.pathExists(path)) {
     		FileUtil.createFile(path);
     	}
@@ -105,7 +103,7 @@ public final class SettingsUtil {
     }
     
     //private
-    private static void setRegistry(JSONObject json, IRegistry<String> registry) {
+    private static void setRegistry(JSONObject json, IVariableRegistry<String> registry) {
     	for (String i : json.keySet()) {
     		Object obj = json.get(i);
     		

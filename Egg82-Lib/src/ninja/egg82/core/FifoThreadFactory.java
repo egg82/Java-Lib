@@ -6,7 +6,7 @@ import java.util.function.IntUnaryOperator;
 
 public class FifoThreadFactory implements ThreadFactory {
 	//vars
-	private AtomicInteger dec = new AtomicInteger(10);
+	private AtomicInteger dec = new AtomicInteger(Thread.MAX_PRIORITY);
 	private ThreadFactory coreFactory = null;
 	
 	//constructor
@@ -24,7 +24,7 @@ public class FifoThreadFactory implements ThreadFactory {
 	//private
 	private IntUnaryOperator update = new IntUnaryOperator() {
 		public int applyAsInt(int operand) {
-			return (operand > 1) ? operand - 1 : 10;
+			return (operand > Thread.MIN_PRIORITY) ? operand - 1 : Thread.MAX_PRIORITY;
 		}
 	};
 }

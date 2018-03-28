@@ -2,7 +2,7 @@ package ninja.egg82.core;
 
 public class SQLError {
 	//vars
-	public Exception ex = null;
+	public volatile Exception ex = null;
 	
 	//constructor
 	public SQLError() {

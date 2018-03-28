@@ -38,9 +38,7 @@ public final class FileUtil {
     public static void createFile(File file, boolean createDirectory) throws Exception {
     	if (createDirectory) {
     		File d = new File(file.getParent());
-    		if (d != null) {
-    			d.mkdirs();
-    		}
+    		d.mkdirs();
     	}
     	
 		file.createNewFile();
@@ -50,9 +48,7 @@ public final class FileUtil {
     	
     	if (createDirectory) {
     		File d = new File(f.getParent());
-    		if (d != null) {
-    			d.mkdirs();
-    		}
+    		d.mkdirs();
     	}
     	
 		f.createNewFile();
@@ -98,7 +94,13 @@ public final class FileUtil {
     		throw new RuntimeException("Path is not a directory.");
     	}
     	
-    	for (File p : file.listFiles()) {
+    	File[] list = file.listFiles();
+    	if (list == null) {
+    		file.delete();
+    		return;
+    	}
+    	
+    	for (File p : list) {
     		if (p.isFile()) {
     			p.delete();
     		} else {
@@ -118,7 +120,13 @@ public final class FileUtil {
     	
     	File d = new File(path);
     	
-    	for (File p : d.listFiles()) {
+    	File[] list = d.listFiles();
+    	if (list == null) {
+    		d.delete();
+    		return;
+    	}
+    	
+    	for (File p : list) {
     		if (p.isFile()) {
     			p.delete();
     		} else {
@@ -256,7 +264,8 @@ public final class FileUtil {
     	
     	open(new File(path));
     }
-    public static void open(File file) throws Exception {
+    @SuppressWarnings("resource")
+	public static void open(File file) throws Exception {
     	if (file == null) {
     		throw new ArgumentNullException("file");
     	}
@@ -340,7 +349,8 @@ public final class FileUtil {
     	
     	return read(new File(path), position, length);
     }
-    public static byte[] read(File file, long position, long length) throws Exception {
+    @SuppressWarnings("resource")
+	public static byte[] read(File file, long position, long length) throws Exception {
     	if (file == null) {
     		throw new ArgumentNullException("file");
     	}
@@ -374,7 +384,8 @@ public final class FileUtil {
     	
     	write(new File(path), bytes, position);
     }
-    public static void write(File file, byte[] bytes, long position) throws Exception {
+    @SuppressWarnings("resource")
+	public static void write(File file, byte[] bytes, long position) throws Exception {
     	if (file == null) {
     		throw new ArgumentNullException("file");
     	}
@@ -403,7 +414,8 @@ public final class FileUtil {
     	
     	erase(new File(path));
     }
-    public static void erase(File file) throws Exception {
+    @SuppressWarnings("resource")
+	public static void erase(File file) throws Exception {
     	if (file == null) {
     		throw new ArgumentNullException("file");
     	}

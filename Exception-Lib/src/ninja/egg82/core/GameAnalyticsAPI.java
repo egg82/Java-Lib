@@ -332,18 +332,16 @@ public class GameAnalyticsAPI {
 		int lowest = min(critical, error, warning, info, debug);
 		if (lowest == -1) {
 			return "error";
+		} else if (lowest == critical) {
+			return "critical";
+		} else if (lowest == error) {
+			return "error";
+		} else if (lowest == warning) {
+			return "warning";
+		} else if (lowest == info) {
+			return "info";
 		} else {
-			if (lowest == critical) {
-				return "critical";
-			} else if (lowest == error) {
-				return "error";
-			} else if (lowest == warning) {
-				return "warning";
-			} else if (lowest == info) {
-				return "info";
-			} else {
-				return "debug";
-			}
+			return "debug";
 		}
 	}
 	private int lowestIndexOf(String haystack, String... needles) {

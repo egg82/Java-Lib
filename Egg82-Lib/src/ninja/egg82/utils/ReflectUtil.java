@@ -1,8 +1,14 @@
 package ninja.egg82.utils;
 
+import java.io.File;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -18,10 +24,22 @@ import org.reflections.util.FilterBuilder;
 
 import com.google.common.collect.Sets;
 
+import me.lucko.jarrelocator.JarRelocator;
+import me.lucko.jarrelocator.Relocation;
 import ninja.egg82.exceptions.ArgumentNullException;
 
 public final class ReflectUtil {
 	//vars
+	private static Method m = null;
+	
+	static {
+		try {
+			m = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+			m.setAccessible(true);
+		} catch (Exception ex) {
+			throw new RuntimeException("Could not get method handler for dep injection.", ex);
+		}
+	}
 	
 	//constructor
 	public ReflectUtil() {
@@ -29,6 +47,104 @@ public final class ReflectUtil {
 	}
 	
 	//public
+	public static void loadClasses(String jarUrl, String jarFileName, String relocationPattern, String relocationShadedPattern, URLClassLoader loader) {
+		// The directory and file name of the downloaded jar
+		File file = new File("libs" + FileUtil.DIRECTORY_SEPARATOR_CHAR + jarFileName);
+		
+		// Relocated jar strings
+		String extension = "";
+		int i = jarFileName.lastIndexOf('.');
+		if (i > 0) {
+		    extension = jarFileName.substring(i + 1);
+		}
+		String strippedJarFileName = jarFileName.substring(0, i);
+		
+		// The directory and file name of the relocated jar
+		File relocatedFile = new File(strippedJarFileName + "-" + relocationShadedPattern + extension);
+		
+		// Make sure the directory and file structure is what we expect
+		if (FileUtil.pathExists(file) && !FileUtil.pathIsFile(file)) {
+			FileUtil.deleteDirectory(file);
+		}
+		if (FileUtil.pathExists(relocatedFile) && !FileUtil.pathIsFile(relocatedFile)) {
+			FileUtil.deleteDirectory(relocatedFile);
+		}
+		// If the file doesn't already exist, download it
+		if (!FileUtil.pathExists(file)) {
+			URL url = null;
+			try {
+				File d = new File(file.getParent());
+	    		d.mkdirs();
+				
+	    		// Download the jar
+				url = new URL(jarUrl);
+				InputStream in = url.openStream();
+				// Write the jar file to disk
+				Files.copy(in, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+				// Cleanup
+				in.close();
+			} catch (Exception ex) {
+				throw new RuntimeException("Could not download file.", ex);
+			}
+		}
+		
+		// If the relocated file doesn't already exist, create it
+		if (!FileUtil.pathExists(relocatedFile)) {
+			// Add relocation rules
+			List<Relocation> rules = new ArrayList<Relocation>();
+			rules.add(new Relocation(relocationPattern, relocationShadedPattern));
+			JarRelocator relocator = new JarRelocator(file, relocatedFile, rules);
+			
+			// Run relocation
+			try {
+				relocator.run();
+			} catch (Exception ex) {
+				throw new RuntimeException("Could not relocate file.", ex);
+			}
+		}
+		
+		// Add relocated jar into classpath
+		try {
+			m.invoke(loader, relocatedFile.toURI().toURL());
+		} catch (Exception ex) {
+			throw new RuntimeException("Could not load file into classpath.", ex);
+		}
+	}
+	public static void loadClasses(String jarUrl, String jarFileName, URLClassLoader loader) {
+		// The directory and file name of the downloaded jar
+		File file = new File("libs" + FileUtil.DIRECTORY_SEPARATOR_CHAR + jarFileName);
+		
+		// Make sure the directory and file structure is what we expect
+		if (FileUtil.pathExists(file) && !FileUtil.pathIsFile(file)) {
+			FileUtil.deleteDirectory(file);
+		}
+		// If the file doesn't already exist, download it
+		if (!FileUtil.pathExists(file)) {
+			URL url = null;
+			try {
+				File d = new File(file.getParent());
+	    		d.mkdirs();
+				
+	    		// Download the jar
+				url = new URL(jarUrl);
+				InputStream in = url.openStream();
+				// Write the jar file to disk
+				Files.copy(in, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+				// Cleanup
+				in.close();
+			} catch (Exception ex) {
+				throw new RuntimeException("Could not download file.", ex);
+			}
+		}
+		
+		// Add downloaded jar into classpath
+		try {
+			m.invoke(loader, file.toURI().toURL());
+		} catch (Exception ex) {
+			throw new RuntimeException("Could not load file into classpath.", ex);
+		}
+	}
+	
 	public static Object invokeMethod(String method, Object obj) {
 		if (obj == null) {
 			return null;

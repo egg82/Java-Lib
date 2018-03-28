@@ -64,7 +64,8 @@ public class EasingUtil {
 			if (t == 0.0d) {
 				return b;
 			}
-			if ((t /= d) == 1.0d) {
+			t /= d;
+			if (t <= 1.0000001d && t >= 0.9999999d) {
 				return b + c;
 			}
 			double p = d * 0.3d;
@@ -75,7 +76,8 @@ public class EasingUtil {
 			if (t == 0.0d) {
 				return b;
 			}
-			if ((t /= d) == 1.0d) {
+			t /= d;
+			if (t <= 1.0000001d && t >= 0.9999999d) {
 				return b + c;
 			}
 			double p = d * 0.3d;
@@ -86,7 +88,8 @@ public class EasingUtil {
 			if (t == 0.0d) {
 				return b;
 			}
-			if ((t /= d / 2.0d) == 2.0d) {
+			t /= d;
+			if ((t / 2.0d) <= 2.0000001d && (t / 2.0d) >= 1.9999999d) {
 				return b + c;
 			}
 			double p = d * (0.3d * 1.5d);

@@ -1,62 +1,64 @@
-package ninja.egg82.patterns;
+package ninja.egg82.patterns.registries;
 
 import java.lang.reflect.Array;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import net.jodah.expiringmap.ExpirationListener;
 import net.jodah.expiringmap.ExpirationPolicy;
 import net.jodah.expiringmap.ExpiringMap;
-import ninja.egg82.events.ExpireEventArgs;
+import ninja.egg82.events.VariableExpireEventArgs;
 import ninja.egg82.exceptions.ArgumentNullException;
 import ninja.egg82.patterns.events.EventHandler;
-import ninja.egg82.patterns.tuples.Pair;
 import ninja.egg82.patterns.tuples.Unit;
+import ninja.egg82.patterns.tuples.pair.Pair;
 import ninja.egg82.utils.ReflectUtil;
 
-public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
+public class VariableExpiringRegistry<K> implements IVariableExpiringRegistry<K> {
 	//vars
 	private Class<K> keyClass = null;
 	private K[] keyCache = null;
-	private volatile boolean keysDirty = false;
+	private AtomicBoolean keysDirty = new AtomicBoolean(false);
 	private ExpiringMap<K, Pair<Class<?>, Unit<Object>>> registry = null;
 	private ConcurrentHashMap<Unit<Object>, K> reverseRegistry = new ConcurrentHashMap<Unit<Object>, K>();
 	
-	private final EventHandler<ExpireEventArgs<K>> expire = new EventHandler<ExpireEventArgs<K>>();
+	private final EventHandler<VariableExpireEventArgs<K>> expire = new EventHandler<VariableExpireEventArgs<K>>();
 	
 	//constructor
-	public ExpiringRegistry(Class<K> keyClass, long defaultRegisterExpirationTimeMilliseconds) {
-		this(keyClass, defaultRegisterExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy.CREATED);
+	public VariableExpiringRegistry(Class<K> keyClass, long defaultRegisterExpirationTime, TimeUnit defaultExpirationUnit) {
+		this(keyClass, defaultRegisterExpirationTime, defaultExpirationUnit, ninja.egg82.enums.ExpirationPolicy.CREATED);
 	}
-	public ExpiringRegistry(K[] keyArray, long defaultRegisterExpirationTimeMilliseconds) {
-		this(keyArray, defaultRegisterExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy.CREATED);
+	public VariableExpiringRegistry(K[] keyArray, long defaultRegisterExpirationTime, TimeUnit defaultExpirationUnit) {
+		this(keyArray, defaultRegisterExpirationTime, defaultExpirationUnit, ninja.egg82.enums.ExpirationPolicy.CREATED);
 	}
 	@SuppressWarnings("unchecked")
-	public ExpiringRegistry(Class<K> keyClass, long defaultRegisterExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy defaultExpirationPolicy) {
+	public VariableExpiringRegistry(Class<K> keyClass, long defaultRegisterExpirationTime, TimeUnit defaultExpirationUnit, ninja.egg82.enums.ExpirationPolicy defaultExpirationPolicy) {
 		this.keyClass = keyClass;
 		keyCache = (K[]) Array.newInstance(keyClass, 0);
 		
 		registry = ExpiringMap.builder()
-			.expiration(defaultRegisterExpirationTimeMilliseconds, TimeUnit.MILLISECONDS)
+			.expiration(defaultRegisterExpirationTime, defaultExpirationUnit)
 			.expirationPolicy(ExpirationPolicy.valueOf(defaultExpirationPolicy.name()))
-			.expirationListener((k, v) -> onRegisterExpiration((K) k, (Pair<Class<?>, Unit<Object>>) v))
+			.expirationListener(onExpiration)
 			.variableExpiration()
 			.build();
 	}
 	@SuppressWarnings("unchecked")
-	public ExpiringRegistry(K[] keyArray, long defaultRegisterExpirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy defaultExpirationPolicy) {
+	public VariableExpiringRegistry(K[] keyArray, long defaultRegisterExpirationTime, TimeUnit defaultExpirationUnit, ninja.egg82.enums.ExpirationPolicy defaultExpirationPolicy) {
 		this.keyClass = (Class<K>) keyArray.getClass().getComponentType();
 		keyCache = (K[]) Array.newInstance(keyClass, 0);
 		
 		registry = ExpiringMap.builder()
-			.expiration(defaultRegisterExpirationTimeMilliseconds, TimeUnit.MILLISECONDS)
+			.expiration(defaultRegisterExpirationTime, defaultExpirationUnit)
 			.expirationPolicy(ExpirationPolicy.valueOf(defaultExpirationPolicy.name()))
-			.expirationListener((k, v) -> onRegisterExpiration((K) k, (Pair<Class<?>, Unit<Object>>) v))
+			.expirationListener(onExpiration)
 			.variableExpiration()
 			.build();
 	}
 	
 	//public
-	public final EventHandler<ExpireEventArgs<K>> onExpire() {
+	public final EventHandler<VariableExpireEventArgs<K>> onExpire() {
 		return expire;
 	}
 	
@@ -71,7 +73,7 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 		
 		if (pair == null) {
 			// Key didn't exist before. Added.
-			keysDirty = true;
+			keysDirty.set(true);
 		} else {
 			// Key existed before. Need to remove old value->key from reverse registry.
 			reverseRegistry.remove(pair.getRight());
@@ -79,18 +81,18 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 		
 		reverseRegistry.put(unit, key);
 	}
-	public final void setRegister(K key, Object data, long expirationTimeMilliseconds) {
+	public final void setRegister(K key, Object data, long expirationTime, TimeUnit expirationUnit) {
 		if (key == null) {
 			throw new ArgumentNullException("key");
 		}
 		
 		Pair<Class<?>, Unit<Object>> pair = registry.get(key);
 		Unit<Object> unit = new Unit<Object>(data);
-		registry.put(key, new Pair<Class<?>, Unit<Object>>((data != null) ? data.getClass() : null, unit), expirationTimeMilliseconds, TimeUnit.MILLISECONDS);
+		registry.put(key, new Pair<Class<?>, Unit<Object>>((data != null) ? data.getClass() : null, unit), expirationTime, expirationUnit);
 		
 		if (pair == null) {
 			// Key didn't exist before. Added.
-			keysDirty = true;
+			keysDirty.set(true);
 		} else {
 			// Key existed before. Need to remove old value->key from reverse registry.
 			reverseRegistry.remove(pair.getRight());
@@ -98,18 +100,18 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 		
 		reverseRegistry.put(unit, key);
 	}
-	public final void setRegister(K key, Object data, long expirationTimeMilliseconds, ninja.egg82.enums.ExpirationPolicy policy) {
+	public final void setRegister(K key, Object data, long expirationTime, TimeUnit expirationUnit, ninja.egg82.enums.ExpirationPolicy policy) {
 		if (key == null) {
 			throw new ArgumentNullException("key");
 		}
 		
 		Pair<Class<?>, Unit<Object>> pair = registry.get(key);
 		Unit<Object> unit = new Unit<Object>(data);
-		registry.put(key, new Pair<Class<?>, Unit<Object>>((data != null) ? data.getClass() : null, unit), ExpirationPolicy.valueOf(policy.name()), expirationTimeMilliseconds, TimeUnit.MILLISECONDS);
+		registry.put(key, new Pair<Class<?>, Unit<Object>>((data != null) ? data.getClass() : null, unit), ExpirationPolicy.valueOf(policy.name()), expirationTime, expirationUnit);
 		
 		if (pair == null) {
 			// Key didn't exist before. Added.
-			keysDirty = true;
+			keysDirty.set(true);
 		} else {
 			// Key existed before. Need to remove old value->key from reverse registry.
 			reverseRegistry.remove(pair.getRight());
@@ -117,12 +119,12 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 		
 		reverseRegistry.put(unit, key);
 	}
-	public final void setRegisterExpiration(K key, long expirationTimeMilliseconds) {
+	public final void setRegisterExpiration(K key, long expirationTime, TimeUnit expirationUnit) {
 		if (key == null) {
 			throw new ArgumentNullException("key");
 		}
 		
-		registry.setExpiration(key, expirationTimeMilliseconds, TimeUnit.MILLISECONDS);
+		registry.setExpiration(key, expirationTime, expirationUnit);
 	}
 	public final void setRegisterPolicy(K key, ninja.egg82.enums.ExpirationPolicy policy) {
 		if (key == null) {
@@ -173,7 +175,7 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 		if (pair != null) {
 			registry.remove(key);
 			reverseRegistry.remove(pair.getRight());
-			keysDirty = true;
+			keysDirty.set(true);
 			return pair.getRight().getType();
 		}
 		return null;
@@ -188,7 +190,7 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 		if (pair != null) {
 			registry.remove(key);
 			reverseRegistry.remove(pair.getRight());
-			keysDirty = true;
+			keysDirty.set(true);
 			
 			if (pair.getRight().getType() == null) {
 				return null;
@@ -282,22 +284,23 @@ public class ExpiringRegistry<K> implements IExpiringRegistry<K> {
 		registry.clear();
 		reverseRegistry.clear();
 		keyCache = (K[]) Array.newInstance(keyClass, 0);
-		keysDirty = false;
+		keysDirty.set(false);
 	}
 	
 	@SuppressWarnings("unchecked")
 	public final K[] getKeys() {
-		if (keysDirty) {
+		if (keysDirty.getAndSet(false)) {
 			keyCache = registry.keySet().toArray((K[]) Array.newInstance(keyClass, 0));
-			keysDirty = false;
 		}
 		return keyCache.clone();
 	}
 	
 	//private
-	private final void onRegisterExpiration(K key, Pair<Class<?>, Unit<Object>> value) {
-		reverseRegistry.remove(value.getRight());
-		keysDirty = true;
-		expire.invoke(this, new ExpireEventArgs<K>(key, value.getLeft(), value.getRight().getType()));
-	}
+	private final ExpirationListener<K, Pair<Class<?>, Unit<Object>>> onExpiration = new ExpirationListener<K, Pair<Class<?>, Unit<Object>>>() {
+		public void expired(K key, Pair<Class<?>, Unit<Object>> value) {
+			reverseRegistry.remove(value.getRight());
+			keysDirty.set(true);
+			expire.invoke(this, new VariableExpireEventArgs<K>(key, value.getLeft(), value.getRight().getType()));
+		}
+	};
 }

@@ -5,6 +5,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import it.unimi.dsi.fastutil.chars.CharArrayList;
+import it.unimi.dsi.fastutil.chars.CharList;
+
 public final class StringUtil {
 	//vars
 	private static final char[] subset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+{}|:\"<>?`-=[]\\;',./".toCharArray();
@@ -23,7 +26,7 @@ public final class StringUtil {
 		return new String(buffer);
 	}
 	public static String shuffle(String input) {
-		ArrayList<Character> letters = new ArrayList<Character>();
+		CharList letters = new CharArrayList();
 		char[] c = input.toCharArray();
 		for (int i = 0; i < c.length; i++) {
 			letters.add(c[i]);
@@ -31,7 +34,7 @@ public final class StringUtil {
 		Collections.shuffle(letters);
 		StringBuilder builder = new StringBuilder(letters.size());
 		for (int i = 0; i < letters.size(); i++) {
-			builder.append(letters.get(i));
+			builder.append(letters.getChar(i));
 		}
 		return builder.toString();
 	}

@@ -5,26 +5,27 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import ninja.egg82.concurrent.DynamicConcurrentDeque;
+import ninja.egg82.concurrent.IConcurrentDeque;
 import ninja.egg82.core.GameAnalyticsAPI;
 import ninja.egg82.exceptionHandlers.builders.IBuilder;
-import ninja.egg82.patterns.DynamicObjectPool;
-import ninja.egg82.patterns.IObjectPool;
 
 public class GameAnalyticsExceptionHandler extends Handler implements IExceptionHandler {
 	//vars
 	private GameAnalyticsAPI api = null;
 	
-	private IObjectPool<LogRecord> logs = new DynamicObjectPool<LogRecord>();
-	private IObjectPool<Exception> exceptions = new DynamicObjectPool<Exception>();
+	private IConcurrentDeque<LogRecord> logs = new DynamicConcurrentDeque<LogRecord>();
+	private IConcurrentDeque<Exception> exceptions = new DynamicConcurrentDeque<Exception>();
 	
 	private ScheduledExecutorService threadPool = null;
-	private IObjectPool<Thread> errorThreads = new DynamicObjectPool<Thread>();
+	private IConcurrentDeque<Thread> errorThreads = new DynamicConcurrentDeque<Thread>();
 	
 	//constructor
 	public GameAnalyticsExceptionHandler() {
@@ -151,7 +152,12 @@ public class GameAnalyticsExceptionHandler extends Handler implements IException
 	//private
 	private Runnable onCleanupThread = new Runnable() {
 		public void run() {
-			errorThreads.removeIf((v) -> (!v.isAlive()));
+			errorThreads.removeIf(cleanupPredicate);
+		}
+	};
+	private Predicate<? super Thread> cleanupPredicate = new Predicate<Thread>() {
+		public boolean test(Thread t) {
+			return !t.isAlive();
 		}
 	};
 }

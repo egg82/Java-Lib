@@ -5,14 +5,14 @@ import java.util.List;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 
+import ninja.egg82.concurrent.DynamicConcurrentDeque;
+import ninja.egg82.concurrent.IConcurrentDeque;
 import ninja.egg82.exceptionHandlers.builders.IBuilder;
-import ninja.egg82.patterns.DynamicObjectPool;
-import ninja.egg82.patterns.IObjectPool;
 
 public class NullExceptionHandler extends Handler implements IExceptionHandler {
 	//vars
-	private IObjectPool<LogRecord> logs = new DynamicObjectPool<LogRecord>();
-	private IObjectPool<Exception> exceptions = new DynamicObjectPool<Exception>();
+	private IConcurrentDeque<LogRecord> logs = new DynamicConcurrentDeque<LogRecord>();
+	private IConcurrentDeque<Exception> exceptions = new DynamicConcurrentDeque<Exception>();
 	
 	//constructor
 	public NullExceptionHandler() {

@@ -3,41 +3,45 @@ package ninja.egg82.patterns;
 import ninja.egg82.events.CompleteEventArgs;
 import ninja.egg82.events.ExceptionEventArgs;
 import ninja.egg82.patterns.events.EventHandler;
+import ninja.egg82.utils.ThreadUtil;
 
-public abstract class SynchronousCommand {
+public abstract class AsyncCommand implements ICommand {
 	//vars
 	private final EventHandler<CompleteEventArgs<?>> complete = new EventHandler<CompleteEventArgs<?>>();
 	private final EventHandler<ExceptionEventArgs<?>> error = new EventHandler<ExceptionEventArgs<?>>();
 	
 	private long startTime = 0L;
-	private int timer = 0;
+	private long delay = 0L;
 	
 	//constructor
-	public SynchronousCommand() {
+	public AsyncCommand() {
 		this(0);
 	}
-	public SynchronousCommand(int delay) {
+	public AsyncCommand(long delay) {
 		if (delay < 0) {
 			throw new IllegalArgumentException("delay cannot be less than zero.");
 		} else if (delay == 0) {
 			return;
 		} else {
-			timer = delay;
+			this.delay = delay;
 		}
 	}
 	
 	//public
 	public final void start() {
-		if (timer != 0) {
-			startTime = System.currentTimeMillis();
-			try {
-				Thread.sleep(timer);
-			} catch (Exception ex) {
-				
-			}
-			onExecute(System.currentTimeMillis() - startTime);
+		startTime = System.currentTimeMillis();
+		if (delay == 0L) {
+			ThreadUtil.submit(new Runnable() {
+				public void run() {
+					onExecute(System.currentTimeMillis() - startTime);
+				}
+			});
 		} else {
-			onExecute(0L);
+			ThreadUtil.schedule(new Runnable() {
+				public void run() {
+					onExecute(System.currentTimeMillis() - startTime);
+				}
+			}, delay);
 		}
 	}
 	

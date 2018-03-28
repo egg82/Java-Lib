@@ -3,16 +3,22 @@ package ninja.egg82.patterns;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+
+import ninja.egg82.concurrent.DynamicConcurrentDeque;
+import ninja.egg82.concurrent.IConcurrentDeque;
 import ninja.egg82.exceptions.ArgumentNullException;
 import ninja.egg82.utils.CollectionUtil;
 import ninja.egg82.utils.ReflectUtil;
 
 public final class ServiceLocator {
 	//vars
-	private static IObjectPool<Class<?>> services = new DynamicObjectPool<Class<?>>();
+	private static IConcurrentDeque<Class<?>> services = new DynamicConcurrentDeque<Class<?>>();
 	private static ConcurrentHashMap<Class<?>, Object> initializedServices = new ConcurrentHashMap<Class<?>, Object>();
-	private static ConcurrentHashMap<Class<?>, Object> lookupCache = new ConcurrentHashMap<Class<?>, Object>();
+	private static Cache<Class<?>, Object> lookupCache = Caffeine.newBuilder().build();
 	
 	//constructor
 	public ServiceLocator() {
@@ -35,7 +41,7 @@ public final class ServiceLocator {
 		}
 		
 		if (result == null) {
-			result = lookupCache.get(clazz);
+			result = lookupCache.getIfPresent(clazz);
 		}
 		
 		if (result == null) {
@@ -45,7 +51,7 @@ public final class ServiceLocator {
 					if (result == null) {
 						result = CollectionUtil.putIfAbsent(initializedServices, c, initializeService(c));
 					}
-					lookupCache.putIfAbsent(clazz, result);
+					lookupCache.put(clazz, result);
 					break;
 				}
 			}
@@ -67,7 +73,11 @@ public final class ServiceLocator {
 		
 		// Destroy any existing services and cache
 		initializedServices.remove(clazz);
-		lookupCache.entrySet().removeIf(v -> ReflectUtil.doesExtend(v.getKey(), clazz));
+		lookupCache.asMap().keySet().removeIf(new Predicate<Class<?>>() {
+			public boolean test(Class<?> t) {
+				return ReflectUtil.doesExtend(t, clazz);
+			}
+		});
 		
 		if (!lazyInitialize) {
 			initializedServices.put(clazz, initializeService(clazz));
@@ -85,7 +95,11 @@ public final class ServiceLocator {
 		Class<?> clazz = initializedService.getClass();
 		
 		// Destroy any existing services and cache
-		lookupCache.entrySet().removeIf(v -> ReflectUtil.doesExtend(v.getKey(), clazz));
+		lookupCache.asMap().keySet().removeIf(new Predicate<Class<?>>() {
+			public boolean test(Class<?> t) {
+				return ReflectUtil.doesExtend(t, clazz);
+			}
+		});
 		initializedServices.put(clazz, initializedService);
 		
 		if (!services.contains(clazz)) {
@@ -100,7 +114,11 @@ public final class ServiceLocator {
 		
 		ArrayList<T> retVal = new ArrayList<T>();
 		
-		lookupCache.entrySet().removeIf(v -> ReflectUtil.doesExtend(v.getKey(), clazz));
+		lookupCache.asMap().keySet().removeIf(new Predicate<Class<?>>() {
+			public boolean test(Class<?> t) {
+				return ReflectUtil.doesExtend(t, clazz);
+			}
+		});
 		
 		for (Class<?> c : services) {
 			if (ReflectUtil.doesExtend(clazz, c)) {
