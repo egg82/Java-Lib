@@ -5,8 +5,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import it.unimi.dsi.fastutil.chars.CharArrayList;
-import it.unimi.dsi.fastutil.chars.CharList;
+import ninja.egg82.primitive.chars.CharArrayList;
+import ninja.egg82.primitive.chars.CharList;
 
 public final class StringUtil {
 	//vars

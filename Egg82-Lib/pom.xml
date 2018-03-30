@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>egg82-lib</artifactId>
-  <version>3.10.44</version>
+  <version>3.11.45</version>
   <name>egg82-lib</name>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -43,20 +43,54 @@
               </filters>
               <minimizeJar>true</minimizeJar>
               <relocations>
-                <!-- Apparently without this being "hidden" we wind up with some very strange reflection behavior -->
                 <relocation>
-                  <pattern>org.reflections</pattern>
-                  <shadedPattern>ninja.egg82.lib.org.reflections</shadedPattern>
-                </relocation>
-                <!-- Relocating injected deps -->
-                <!-- <relocation>
                   <pattern>com.github.benmanes.caffeine</pattern>
-                  <shadedPattern>ninja.egg82.lib.com.github.benmanes.caffeine</shadedPattern>
+                  <shadedPattern>me.egg82.extern.com.github.benmanes.caffeine</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.google.common</pattern>
+                  <shadedPattern>me.egg82.extern.com.google.common</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.googlecode.concurrentlinkedhashmap</pattern>
+                  <shadedPattern>me.egg82.extern.com.googlecode.concurrentlinkedhashmap</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>it.unimi.dsi.fastutil</pattern>
-                  <shadedPattern>ninja.egg82.lib.it.unimi.dsi.fastutil</shadedPattern>
-                </relocation> -->
+                  <shadedPattern>me.egg82.extern.it.unimi.dsi.fastutil</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>javassist</pattern>
+                  <shadedPattern>me.egg82.extern.javassist</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>javax.annotation</pattern>
+                  <shadedPattern>me.egg82.extern.javax.annotation</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>net.jcip</pattern>
+                  <shadedPattern>me.egg82.extern.net.jcip</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>net.jodah.expiringmap</pattern>
+                  <shadedPattern>me.egg82.extern.net.jodah.expiringmap</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache.commons</pattern>
+                  <shadedPattern>me.egg82.extern.org.apache.commons</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.json</pattern>
+                  <shadedPattern>me.egg82.extern.org.json</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.reflections</pattern>
+                  <shadedPattern>me.egg82.extern.org.reflections</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.slf4j</pattern>
+                  <shadedPattern>me.egg82.extern.org.slf4j</shadedPattern>
+                </relocation>
               </relocations>
             </configuration>
           </execution>
@@ -76,11 +110,6 @@
     </repository>
   </repositories>
   <dependencies>
-    <dependency>
-      <groupId>me.lucko</groupId>
-      <artifactId>jar-relocator</artifactId>
-      <version>1.3</version>
-    </dependency>
     <dependency>
       <groupId>commons-lang</groupId>
       <artifactId>commons-lang</artifactId>
@@ -128,16 +157,9 @@
       <version>1.0</version>
     </dependency>
     <dependency>
-      <groupId>it.unimi.dsi</groupId>
-      <artifactId>fastutil</artifactId>
-      <version>8.1.1</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>com.github.ben-manes.caffeine</groupId>
       <artifactId>caffeine</artifactId>
       <version>2.6.2</version>
-      <scope>provided</scope>
     </dependency>
   </dependencies>
   <description>Base library, full of goodies</description>

@@ -24,8 +24,6 @@ import org.reflections.util.FilterBuilder;
 
 import com.google.common.collect.Sets;
 
-import me.lucko.jarrelocator.JarRelocator;
-import me.lucko.jarrelocator.Relocation;
 import ninja.egg82.exceptions.ArgumentNullException;
 
 public final class ReflectUtil {
@@ -47,69 +45,6 @@ public final class ReflectUtil {
 	}
 	
 	//public
-	public static void loadClasses(String jarUrl, String jarFileName, String relocationPattern, String relocationShadedPattern, URLClassLoader loader) {
-		// The directory and file name of the downloaded jar
-		File file = new File("libs" + FileUtil.DIRECTORY_SEPARATOR_CHAR + jarFileName);
-		
-		// Relocated jar strings
-		String extension = "";
-		int i = jarFileName.lastIndexOf('.');
-		if (i > 0) {
-		    extension = jarFileName.substring(i + 1);
-		}
-		String strippedJarFileName = jarFileName.substring(0, i);
-		
-		// The directory and file name of the relocated jar
-		File relocatedFile = new File(strippedJarFileName + "-" + relocationShadedPattern + extension);
-		
-		// Make sure the directory and file structure is what we expect
-		if (FileUtil.pathExists(file) && !FileUtil.pathIsFile(file)) {
-			FileUtil.deleteDirectory(file);
-		}
-		if (FileUtil.pathExists(relocatedFile) && !FileUtil.pathIsFile(relocatedFile)) {
-			FileUtil.deleteDirectory(relocatedFile);
-		}
-		// If the file doesn't already exist, download it
-		if (!FileUtil.pathExists(file)) {
-			URL url = null;
-			try {
-				File d = new File(file.getParent());
-	    		d.mkdirs();
-				
-	    		// Download the jar
-				url = new URL(jarUrl);
-				InputStream in = url.openStream();
-				// Write the jar file to disk
-				Files.copy(in, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-				// Cleanup
-				in.close();
-			} catch (Exception ex) {
-				throw new RuntimeException("Could not download file.", ex);
-			}
-		}
-		
-		// If the relocated file doesn't already exist, create it
-		if (!FileUtil.pathExists(relocatedFile)) {
-			// Add relocation rules
-			List<Relocation> rules = new ArrayList<Relocation>();
-			rules.add(new Relocation(relocationPattern, relocationShadedPattern));
-			JarRelocator relocator = new JarRelocator(file, relocatedFile, rules);
-			
-			// Run relocation
-			try {
-				relocator.run();
-			} catch (Exception ex) {
-				throw new RuntimeException("Could not relocate file.", ex);
-			}
-		}
-		
-		// Add relocated jar into classpath
-		try {
-			m.invoke(loader, relocatedFile.toURI().toURL());
-		} catch (Exception ex) {
-			throw new RuntimeException("Could not load file into classpath.", ex);
-		}
-	}
 	public static void loadClasses(String jarUrl, String jarFileName, URLClassLoader loader) {
 		// The directory and file name of the downloaded jar
 		File file = new File("libs" + FileUtil.DIRECTORY_SEPARATOR_CHAR + jarFileName);
