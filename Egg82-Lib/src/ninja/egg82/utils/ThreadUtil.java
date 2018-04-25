@@ -1,10 +1,9 @@
 package ninja.egg82.utils;
 
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
@@ -18,6 +17,7 @@ import java.util.logging.Logger;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import ninja.egg82.core.MinMaxScheduledThreadPoolExecutor;
+import ninja.egg82.core.MinMaxThreadPoolExecutor;
 
 public class ThreadUtil {
 	//vars
@@ -26,16 +26,17 @@ public class ThreadUtil {
 	private static final Logger logger = Logger.getLogger("ninja.egg82.utils.ThreadUtil");
 	
 	// Thread pools
-	private static volatile ThreadPoolExecutor dynamicPool = null;
+	private static volatile ThreadPoolExecutor dynamicPool = createDynamicPool(new ThreadFactoryBuilder().setNameFormat("egg82-dynamic-%d").build());
 	private static volatile ScheduledExecutorService singlePool = null;
 	private static ThreadFactory singleThreadFactory = new ThreadFactoryBuilder().setNameFormat("egg82-single_scheduled-%d").build();
-	private static volatile MinMaxScheduledThreadPoolExecutor scheduledPool = null;
+	private static volatile MinMaxScheduledThreadPoolExecutor scheduledPool = createScheduledPool(new ThreadFactoryBuilder().setNameFormat("egg82-scheduled-%d").build());
 	
-	// Double-lock, preventing race conditions in a multi-threaded environment
+	// Lock to prevent multiple simultaneous shutdowns/restarts/etc
 	private static Lock objLock = new ReentrantLock();
 	
-	// Thread queue for the dynamic pool
-	private static BlockingQueue<Runnable> dynamicQueue = new ArrayBlockingQueue<Runnable>(250);
+	static {
+		singlePool = Executors.newSingleThreadScheduledExecutor(singleThreadFactory);
+	}
 	
 	//constructor
 	public ThreadUtil() {
@@ -51,14 +52,17 @@ public class ThreadUtil {
 	 * @return The future
 	 */
 	public static Future<?> submit(Runnable runnable) {
-		objLock.lock();
-		if (dynamicPool == null) {
-			dynamicPool = createDynamicPool(new ThreadFactoryBuilder().setNameFormat("egg82-dynamic-%d").build());
-		}
-		objLock.unlock();
-		
-		// We don't care much about killed threads here, since they auto-restart
-		return dynamicPool.submit(runnable);
+		return dynamicPool.submit(new Runnable() {
+			public void run() {
+				// If the task throws an exception the pool will kill the thread
+				try {
+					runnable.run();
+				} catch (Exception ex) {
+					// Log the error, at least
+					logger.log(Level.SEVERE, "Could not run scheduled task.", ex);
+				}
+			}
+		});
 	}
 	/**
 	 * Schedule a new task to be run after a delay
@@ -68,12 +72,6 @@ public class ThreadUtil {
 	 * @return The scheduled future
 	 */
 	public static ScheduledFuture<?> schedule(Runnable runnable, long delayMillis) {
-		objLock.lock();
-		if (singlePool == null) {
-			singlePool = Executors.newSingleThreadScheduledExecutor(singleThreadFactory);
-		}
-		objLock.unlock();
-		
 		return singlePool.schedule(new Runnable() {
 			public void run() {
 				// If the task throws an exception the pool will kill the thread
@@ -95,12 +93,6 @@ public class ThreadUtil {
 	 * @return The scheduled future
 	 */
 	public static ScheduledFuture<?> scheduleAtFixedRate(Runnable runnable, long initialDelayMillis, long periodMillis) {
-		objLock.lock();
-		if (scheduledPool == null) {
-			scheduledPool = createScheduledPool(new ThreadFactoryBuilder().setNameFormat("egg82-scheduled-%d").build());
-		}
-		objLock.unlock();
-		
 		return scheduledPool.scheduleAtFixedRate(new Runnable() {
 			public void run() {
 				// If the task throws an exception the pool will completely stop trying to run this task, ever
@@ -122,25 +114,15 @@ public class ThreadUtil {
 	public static void rename(String newName) {
 		objLock.lock();
 		
-		if (dynamicPool == null) {
-			dynamicPool = createDynamicPool(new ThreadFactoryBuilder().setNameFormat(newName + "-dynamic-%d").build());
-		} else {
-			dynamicPool.setThreadFactory(new ThreadFactoryBuilder().setNameFormat(newName + "-dynamic-%d").build());
-		}
+		dynamicPool.setThreadFactory(new ThreadFactoryBuilder().setNameFormat(newName + "-dynamic-%d").build());
 		singleThreadFactory = new ThreadFactoryBuilder().setNameFormat(newName + "-single_scheduled-%d").build();
-		if (singlePool != null) {
-			try {
-				singlePool.shutdown();
-			} catch (Exception ex) {
-				
-			}
+		try {
+			singlePool.shutdown();
+		} catch (Exception ex) {
+			
 		}
 		singlePool = Executors.newSingleThreadScheduledExecutor(singleThreadFactory);
-		if (scheduledPool == null) {
-			scheduledPool = createScheduledPool(new ThreadFactoryBuilder().setNameFormat(newName + "-scheduled-%d").build());
-		} else {
-			scheduledPool.setThreadFactory(new ThreadFactoryBuilder().setNameFormat(newName + "-scheduled-%d").build());
-		}
+		scheduledPool.setThreadFactory(new ThreadFactoryBuilder().setNameFormat(newName + "-scheduled-%d").build());
 		
 		objLock.unlock();
 	}
@@ -152,7 +134,7 @@ public class ThreadUtil {
 	 */
 	public static void shutdown(long waitMillis) {
 		objLock.lock();
-		shutdownInternal(waitMillis);
+		internalShutdown(waitMillis);
 		objLock.unlock();
 	}
 	/**
@@ -162,18 +144,19 @@ public class ThreadUtil {
 	 */
 	public static void restart(long shutdownWaitMillis) {
 		objLock.lock();
-		
 		if ((dynamicPool != null && !dynamicPool.isShutdown()) || (singlePool != null && !singlePool.isShutdown()) || (scheduledPool != null && !scheduledPool.isShutdown())) {
-			shutdownInternal(shutdownWaitMillis);
+			internalShutdown(shutdownWaitMillis);
 		}
 		
 		dynamicPool = createDynamicPool(dynamicPool.getThreadFactory());
 		singlePool = Executors.newSingleThreadScheduledExecutor(singleThreadFactory);
 		scheduledPool = createScheduledPool(scheduledPool.getThreadFactory());
-		
 		objLock.unlock();
 	}
 	
+	public static ExecutorService createPool(int minPoolSize, int maxPoolSize, long keepAliveMillis, ThreadFactory threadFactory) {
+		return new MinMaxThreadPoolExecutor(minPoolSize, maxPoolSize, keepAliveMillis, threadFactory);
+	}
 	public static ScheduledExecutorService createScheduledPool(int minPoolSize, int maxPoolSize, long keepAliveMillis, ThreadFactory threadFactory) {
 		return new MinMaxScheduledThreadPoolExecutor(minPoolSize, maxPoolSize, keepAliveMillis, threadFactory);
 	}
@@ -181,23 +164,9 @@ public class ThreadUtil {
 	//private
 	private static ThreadPoolExecutor createDynamicPool(ThreadFactory threadFactory) {
 		// Create a pool starting at 1 and ending at the number of available processors. Kill new threads after 30s if nothing new comes in
-		ThreadPoolExecutor retVal = new ThreadPoolExecutor(1, Runtime.getRuntime().availableProcessors(), 30L * 1000L, TimeUnit.MILLISECONDS, dynamicQueue);
+		ThreadPoolExecutor retVal = new ThreadPoolExecutor(1, Runtime.getRuntime().availableProcessors(), 30L * 1000L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), threadFactory);
 		// Allow the core threads to terminate just like the non-core threads
 		retVal.allowCoreThreadTimeOut(true);
-		
-		// Fill the backlog if needed
-		retVal.setRejectedExecutionHandler(new RejectedExecutionHandler() {
-			public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-				try {
-					executor.getQueue().put(r);
-				} catch (Exception ex) {
-					
-				}
-			}
-		});
-		
-		// Set the factory
-		retVal.setThreadFactory(threadFactory);
 		
 		return retVal;
 	}
@@ -206,7 +175,7 @@ public class ThreadUtil {
 		return new MinMaxScheduledThreadPoolExecutor(1, Runtime.getRuntime().availableProcessors(), 120L * 1000L, threadFactory);
 	}
 	
-	private static void shutdownInternal(long waitMillis) {
+	private static void internalShutdown(long waitMillis) {
 		try {
 			if (waitMillis > 0) {
 				if (dynamicPool != null) {

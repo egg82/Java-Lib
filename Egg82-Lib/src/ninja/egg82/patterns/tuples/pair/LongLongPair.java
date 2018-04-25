@@ -9,10 +9,14 @@ public final class LongLongPair {
 	private volatile long left = 0L;
 	private volatile long right = 0L;
 	
+	private volatile int hashCode = 0;
+	
 	//constructor
 	public LongLongPair(long left, long right) {
 		this.left = left;
 		this.right = right;
+		
+		hashCode = new HashCodeBuilder(13048583, 9832513).append(left).append(right).toHashCode();
 	}
 	
 	//public
@@ -21,12 +25,14 @@ public final class LongLongPair {
 	}
 	public void setLeft(long left) {
 		this.left = left;
+		hashCode = new HashCodeBuilder(13048583, 9832513).append(left).append(right).toHashCode();
 	}
 	public long getRight() {
 		return right;
 	}
 	public void setRight(long right) {
 		this.right = right;
+		hashCode = new HashCodeBuilder(13048583, 9832513).append(left).append(right).toHashCode();
 	}
 	
 	public boolean equals(Object obj) {
@@ -51,7 +57,7 @@ public final class LongLongPair {
 		return false;
 	}
 	public int hashCode() {
-		return new HashCodeBuilder(13048583, 9832513).append(left).append(right).toHashCode();
+		return hashCode;
 	}
 	
 	//private

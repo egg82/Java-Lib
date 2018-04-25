@@ -8,9 +8,12 @@ public class Unit<T> {
 	//vars
 	private volatile T type = null;
 	
+	private volatile int hashCode = 0;
+	
 	//constructor
 	public Unit(T type) {
 		this.type = type;
+		hashCode = new HashCodeBuilder(1938359, 1938301).append(type).toHashCode();
 	}
 	
 	//public
@@ -19,6 +22,7 @@ public class Unit<T> {
 	}
 	public void setType(T type) {
 		this.type = type;
+		hashCode = new HashCodeBuilder(1938359, 1938301).append(type).toHashCode();
 	}
 	
 	public boolean equals(Object obj) {
@@ -40,7 +44,7 @@ public class Unit<T> {
 		return false;
 	}
 	public int hashCode() {
-		return new HashCodeBuilder(1938359, 1938301).append(type).toHashCode();
+		return hashCode;
 	}
 	
 	//private

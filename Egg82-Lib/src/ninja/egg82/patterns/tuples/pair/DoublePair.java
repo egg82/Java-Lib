@@ -9,10 +9,14 @@ public final class DoublePair<R> {
 	private volatile double left = 0.0d;
 	private volatile R right = null;
 	
+	private volatile int hashCode = 0;
+	
 	//constructor
 	public DoublePair(double left, R right) {
 		this.left = left;
 		this.right = right;
+		
+		hashCode = new HashCodeBuilder(13048583, 9832513).append(left).append(right).toHashCode();
 	}
 	
 	//public
@@ -21,12 +25,14 @@ public final class DoublePair<R> {
 	}
 	public void setLeft(double left) {
 		this.left = left;
+		hashCode = new HashCodeBuilder(13048583, 9832513).append(left).append(right).toHashCode();
 	}
 	public R getRight() {
 		return right;
 	}
 	public void setRight(R right) {
 		this.right = right;
+		hashCode = new HashCodeBuilder(13048583, 9832513).append(left).append(right).toHashCode();
 	}
 	
 	public boolean equals(Object obj) {
@@ -52,7 +58,7 @@ public final class DoublePair<R> {
 		return false;
 	}
 	public int hashCode() {
-		return new HashCodeBuilder(13048583, 9832513).append(left).append(right).toHashCode();
+		return hashCode;
 	}
 	
 	//private

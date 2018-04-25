@@ -10,11 +10,15 @@ public class Triplet<L, C, R> {
 	private volatile C center = null;
 	private volatile R right = null;
 	
+	private volatile int hashCode = 0;
+	
 	//constructor
 	public Triplet(L left, C center, R right) {
 		this.left = left;
 		this.center = center;
 		this.right = right;
+		
+		hashCode = new HashCodeBuilder(938402693, 23487979).append(left).append(center).append(right).toHashCode();
 	}
 	
 	//public
@@ -23,18 +27,21 @@ public class Triplet<L, C, R> {
 	}
 	public void setLeft(L left) {
 		this.left = left;
+		hashCode = new HashCodeBuilder(938402693, 23487979).append(left).append(center).append(right).toHashCode();
 	}
 	public C getCenter() {
 		return center;
 	}
 	public void setCenter(C center) {
 		this.center = center;
+		hashCode = new HashCodeBuilder(938402693, 23487979).append(left).append(center).append(right).toHashCode();
 	}
 	public R getRight() {
 		return right;
 	}
 	public void setRight(R right) {
 		this.right = right;
+		hashCode = new HashCodeBuilder(938402693, 23487979).append(left).append(center).append(right).toHashCode();
 	}
 	
 	public boolean equals(Object obj) {
@@ -63,7 +70,7 @@ public class Triplet<L, C, R> {
 		return false;
 	}
 	public int hashCode() {
-		return new HashCodeBuilder(938402693, 23487979).append(left).append(center).append(right).toHashCode();
+		return hashCode;
 	}
 	
 	//private

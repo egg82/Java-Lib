@@ -4,15 +4,15 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 
 import ninja.egg82.utils.ReflectUtil;
 
-public final class Pair<L, R> {
+public final class BooleanBooleanPair {
 	//vars
-	private volatile L left = null;
-	private volatile R right = null;
+	private volatile boolean left = false;
+	private volatile boolean right = false;
 	
 	private volatile int hashCode = 0;
 	
 	//constructor
-	public Pair(L left, R right) {
+	public BooleanBooleanPair(boolean left, boolean right) {
 		this.left = left;
 		this.right = right;
 		
@@ -20,17 +20,17 @@ public final class Pair<L, R> {
 	}
 	
 	//public
-	public L getLeft() {
+	public boolean getLeft() {
 		return left;
 	}
-	public void setLeft(L left) {
+	public void setLeft(boolean left) {
 		this.left = left;
 		hashCode = new HashCodeBuilder(13048583, 9832513).append(left).append(right).toHashCode();
 	}
-	public R getRight() {
+	public boolean getRight() {
 		return right;
 	}
-	public void setRight(R right) {
+	public void setRight(boolean right) {
 		this.right = right;
 		hashCode = new HashCodeBuilder(13048583, 9832513).append(left).append(right).toHashCode();
 	}
@@ -46,12 +46,10 @@ public final class Pair<L, R> {
 			return false;
 		}
 		
-		Pair<?, ?> p = (Pair<?, ?>) obj;
-		final Object l = p.left;
-		final Object r = p.right;
+		BooleanBooleanPair p = (BooleanBooleanPair) obj;
 		if (
-			((l == null && left == null) || (l != null && l.equals(left)))
-			&& ((r == null && right == null) || (r != null && r.equals(right)))
+			(p.left == left)
+			&& (p.right == right)
 		) {
 			return true;
 		}

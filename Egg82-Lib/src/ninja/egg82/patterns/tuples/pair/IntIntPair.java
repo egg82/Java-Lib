@@ -9,10 +9,14 @@ public final class IntIntPair {
 	private volatile int left = 0;
 	private volatile int right = 0;
 	
+	private volatile int hashCode = 0;
+	
 	//constructor
 	public IntIntPair(int left, int right) {
 		this.left = left;
 		this.right = right;
+		
+		hashCode = new HashCodeBuilder(13048583, 9832513).append(left).append(right).toHashCode();
 	}
 	
 	//public
@@ -21,12 +25,14 @@ public final class IntIntPair {
 	}
 	public void setLeft(int left) {
 		this.left = left;
+		hashCode = new HashCodeBuilder(13048583, 9832513).append(left).append(right).toHashCode();
 	}
 	public int getRight() {
 		return right;
 	}
 	public void setRight(int right) {
 		this.right = right;
+		hashCode = new HashCodeBuilder(13048583, 9832513).append(left).append(right).toHashCode();
 	}
 	
 	public boolean equals(Object obj) {
@@ -51,7 +57,7 @@ public final class IntIntPair {
 		return false;
 	}
 	public int hashCode() {
-		return new HashCodeBuilder(13048583, 9832513).append(left).append(right).toHashCode();
+		return hashCode;
 	}
 	
 	//private
