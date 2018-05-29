@@ -431,12 +431,6 @@ public class SQLite implements ISQL {
 			
 			// Execute the new statement
 			execute(conn, command.getPreparedStatement(), parallel, query, null, namedParams, uuid);
-			// Release resources
-			try {
-				command.close();
-			} catch (Exception ex) {
-				
-			}
 		} else {
 			// The prepared statement to use
 			PreparedStatement command = null;
@@ -480,12 +474,6 @@ public class SQLite implements ISQL {
 			
 			// Execute the new statement
 			execute(conn, command, parallel, query, params, null, uuid);
-			// Release resources
-			try {
-				command.close();
-			} catch (Exception ex) {
-				
-			}
 		}
 	}
 	
@@ -496,6 +484,13 @@ public class SQLite implements ISQL {
 			command.execute();
 		} catch (Exception ex) {
 			if (ex.getClass().getSimpleName().equals("CommunicationsException") || ex.getClass().getSimpleName().equals("EOFException") || contains("CommunicationsException", ex.getCause())) {
+				// Release resources
+				try {
+					command.close();
+				} catch (Exception ex2) {
+					
+				}
+				
 				// Check connection state
 				if (!connected.get()) {
 					return;
@@ -518,6 +513,13 @@ public class SQLite implements ISQL {
 				conn = reconnect(conn);
 				freeConnections.add(conn);
 			} else {
+				// Release resources
+				try {
+					command.close();
+				} catch (Exception ex2) {
+					
+				}
+				
 				// Errored on execution, invoke the error method and try sending the next item in the queue
 				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
 				if (!isParallel) {
@@ -536,6 +538,13 @@ public class SQLite implements ISQL {
 		try {
 			d.recordsAffected = command.getUpdateCount();
 		} catch (Exception ex) {
+			// Release resources
+			try {
+				command.close();
+			} catch (Exception ex2) {
+				
+			}
+			
 			// Errored, invoke the error method and try sending the next item in the queue
 			error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
 			if (!isParallel) {
@@ -552,6 +561,13 @@ public class SQLite implements ISQL {
 		try {
 			results = command.getResultSet();
 		} catch (Exception ex) {
+			// Release resources
+			try {
+				command.close();
+			} catch (Exception ex2) {
+				
+			}
+			
 			// Errored, invoke the error method and try sending the next item in the queue
 			error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
 			if (!isParallel) {
@@ -570,6 +586,13 @@ public class SQLite implements ISQL {
 			try {
 				metaData = results.getMetaData();
 			} catch (Exception ex) {
+				// Release resources
+				try {
+					command.close();
+				} catch (Exception ex2) {
+					
+				}
+				
 				// Errored, invoke the error method and try sending the next item in the queue
 				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
 				if (!isParallel) {
@@ -588,6 +611,13 @@ public class SQLite implements ISQL {
 					tColumns.add(metaData.getColumnName(i));
 				}
 			} catch (Exception ex) {
+				// Release resources
+				try {
+					command.close();
+				} catch (Exception ex2) {
+					
+				}
+				
 				// Errored, invoke the error method and try sending the next item in the queue
 				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
 				if (!isParallel) {
@@ -615,6 +645,13 @@ public class SQLite implements ISQL {
 					tData.add(tVals);
 				}
 			} catch (Exception ex) {
+				// Release resources
+				try {
+					command.close();
+				} catch (Exception ex2) {
+					
+				}
+				
 				// Errored, invoke the error method and try sending the next item in the queue
 				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
 				if (!isParallel) {
@@ -639,6 +676,13 @@ public class SQLite implements ISQL {
 					}
 				}
 			} catch (Exception ex) {
+				// Release resources
+				try {
+					command.close();
+				} catch (Exception ex2) {
+					
+				}
+				
 				// Errored, invoke the error method and try sending the next item in the queue
 				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
 				if (!isParallel) {
@@ -656,6 +700,13 @@ public class SQLite implements ISQL {
 				}
 			}
 			
+			// Release resources
+			try {
+				command.close();
+			} catch (Exception ex2) {
+				
+			}
+			
 			// Invoke the data event and try sending the next item in the queue
 			data.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(), d, u));
 			if (!isParallel) {
@@ -663,6 +714,13 @@ public class SQLite implements ISQL {
 			}
 			sendNext(conn);
 		} else {
+			// Release resources
+			try {
+				command.close();
+			} catch (Exception ex2) {
+				
+			}
+			
 			// Set dummy data in the return data object so nobody hits an unexpected null value
 			d.columns = new String[0];
 			d.data = new Object[0][];
