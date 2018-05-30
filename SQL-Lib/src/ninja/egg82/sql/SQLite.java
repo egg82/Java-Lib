@@ -34,12 +34,12 @@ import ninja.egg82.concurrent.IConcurrentDeque;
 import ninja.egg82.core.NamedParameterStatement;
 import ninja.egg82.core.SQLData;
 import ninja.egg82.core.SQLError;
+import ninja.egg82.core.SQLFileUtil;
 import ninja.egg82.core.SQLQueueData;
 import ninja.egg82.enums.SQLType;
 import ninja.egg82.events.SQLEventArgs;
 import ninja.egg82.patterns.events.EventArgs;
 import ninja.egg82.patterns.events.EventHandler;
-import ninja.egg82.utils.FileUtil;
 import ninja.egg82.utils.ThreadUtil;
 
 public class SQLite implements ISQL {
@@ -78,7 +78,7 @@ public class SQLite implements ISQL {
 	// The jar file to download and use for dep injection in case we need it
 	private static final String SQLITE_JAR = "https://bitbucket.org/xerial/sqlite-jdbc/downloads/sqlite-jdbc-3.21.0.jar";
 	
-	private String filePath = null;
+	private File file = null;
 	
 	//constructor
 	public SQLite(int numConnections, String threadName) {
@@ -157,17 +157,17 @@ public class SQLite implements ISQL {
 			throw new IllegalArgumentException("filePath cannot be null or empty.");
 		}
 		
-		this.filePath = filePath;
+		this.file = new File(filePath);
 		
 		// Create the directory and file structure, if needed
-		if (!FileUtil.pathExists(filePath)) {
+		if (!SQLFileUtil.pathExists(file)) {
 			try {
-				FileUtil.createFile(filePath);
+				SQLFileUtil.createFile(file);
 			} catch (Exception ex) {
 				throw new RuntimeException("Could not create database file.", ex);
 			}
 		} else {
-			if (!FileUtil.pathIsFile(filePath)) {
+			if (!SQLFileUtil.pathIsFile(file)) {
 				throw new RuntimeException("filePath is not a valid file.");
 			}
 		}
@@ -747,7 +747,7 @@ public class SQLite implements ISQL {
 			
 			// Reconnect
 			try {
-				conn = (Connection) m.invoke(null, "jdbc:sqlite:" + filePath, new Properties(), Class.forName("org.sqlite.JDBC", true, loader));
+				conn = (Connection) m.invoke(null, "jdbc:sqlite:" + file.getAbsolutePath(), new Properties(), Class.forName("org.sqlite.JDBC", true, loader));
 			} catch (Exception ex2) {
 				good = false;
 			}
@@ -776,14 +776,14 @@ public class SQLite implements ISQL {
 	
 	private static File getSQLiteFile() {
 		// The directory and file name of the downloaded jar
-		File file = new File("libs" + FileUtil.DIRECTORY_SEPARATOR_CHAR + "sqlite.jar");
+		File file = new File(new File("libs"), "sqlite.jar");
 		
 		// Make sure the directory and file structure is what we expect
-		if (FileUtil.pathExists(file) && !FileUtil.pathIsFile(file)) {
-			FileUtil.deleteDirectory(file);
+		if (SQLFileUtil.pathExists(file) && !SQLFileUtil.pathIsFile(file)) {
+			SQLFileUtil.deleteDirectory(file);
 		}
 		// If the file doesn't already exist, download it
-		if (!FileUtil.pathExists(file)) {
+		if (!SQLFileUtil.pathExists(file)) {
 			URL url = null;
 			try {
 				File d = new File(file.getParent());

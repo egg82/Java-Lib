@@ -19,7 +19,6 @@ import ninja.egg82.concurrent.DynamicConcurrentDeque;
 import ninja.egg82.concurrent.IConcurrentDeque;
 import ninja.egg82.core.LoggingRollbarResponseHandler;
 import ninja.egg82.exceptionHandlers.builders.IBuilder;
-import ninja.egg82.exceptions.ArgumentNullException;
 import ninja.egg82.patterns.tuples.pair.Int2Pair;
 
 public class RollbarExceptionHandler extends Handler implements IExceptionHandler {
@@ -240,7 +239,7 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	
 	private void handleUncaughtErrors(Thread thread) {
 		if (thread == null) {
-			throw new ArgumentNullException("thread");
+			throw new IllegalArgumentException("thread cannot be null.");
 		}
 		thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
 			public void uncaughtException(Thread t, Throwable ex) {
@@ -260,7 +259,7 @@ public class RollbarExceptionHandler extends Handler implements IExceptionHandle
 	}
 	private void unhandleUncaughtErrors(Thread thread) {
 		if (thread == null) {
-			throw new ArgumentNullException("thread");
+			throw new IllegalArgumentException("thread cannot be null.");
 		}
 		thread.setUncaughtExceptionHandler(null);
 	}

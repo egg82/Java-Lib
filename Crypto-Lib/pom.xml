@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>crypto-lib</artifactId>
-  <version>1.1.4</version>
+  <version>1.1.5</version>
   <name>egg82-crypto-lib</name>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -53,10 +53,14 @@
               <relocations>
                 <relocation>
                   <pattern>org.bouncycastle</pattern>
-                  <shadedPattern>ninja.egg82.lib.org.bouncycastle</shadedPattern>
+                  <shadedPattern>me.egg82.extern.org.bouncycastle</shadedPattern>
                   <excludes>
                     <exclude>org.bouncycastle.x509.*</exclude>
                   </excludes>
+                </relocation>
+                <relocation>
+                  <pattern>org.slf4j</pattern>
+                  <shadedPattern>me.egg82.extern.org.slf4j</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>
@@ -83,11 +87,6 @@
 	  <artifactId>slf4j-api</artifactId>
 	  <version>1.7.25</version>
 	</dependency>
-	<dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-simple</artifactId>
-      <version>1.7.25</version>
-    </dependency>
   </dependencies>
   <description>Wrapper for cryptographic operations</description>
   <url>https://www.egg82.ninja</url>

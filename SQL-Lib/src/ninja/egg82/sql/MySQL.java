@@ -35,12 +35,12 @@ import ninja.egg82.concurrent.IConcurrentDeque;
 import ninja.egg82.core.NamedParameterStatement;
 import ninja.egg82.core.SQLData;
 import ninja.egg82.core.SQLError;
+import ninja.egg82.core.SQLFileUtil;
 import ninja.egg82.core.SQLQueueData;
 import ninja.egg82.enums.SQLType;
 import ninja.egg82.events.SQLEventArgs;
 import ninja.egg82.patterns.events.EventArgs;
 import ninja.egg82.patterns.events.EventHandler;
-import ninja.egg82.utils.FileUtil;
 import ninja.egg82.utils.ThreadUtil;
 
 public class MySQL implements ISQL {
@@ -794,14 +794,14 @@ public class MySQL implements ISQL {
 	
 	private static File getMySQLFile() {
 		// The directory and file name of the downloaded jar
-		File file = new File("libs" + FileUtil.DIRECTORY_SEPARATOR_CHAR + "mysql.jar");
+		File file = new File(new File("libs"), "mysql.jar");
 		
 		// Make sure the directory and file structure is what we expect
-		if (FileUtil.pathExists(file) && !FileUtil.pathIsFile(file)) {
-			FileUtil.deleteDirectory(file);
+		if (SQLFileUtil.pathExists(file) && !SQLFileUtil.pathIsFile(file)) {
+			SQLFileUtil.deleteDirectory(file);
 		}
 		// If the file doesn't already exist, download it
-		if (!FileUtil.pathExists(file)) {
+		if (!SQLFileUtil.pathExists(file)) {
 			URL url = null;
 			try {
 				// Create the directory structure, if needed

@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>egg82-lib</artifactId>
-  <version>3.12.46</version>
+  <version>4.0.0</version>
   <name>egg82-lib</name>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -44,50 +44,6 @@
               <minimizeJar>true</minimizeJar>
               <relocations>
                 <relocation>
-                  <pattern>com.github.benmanes.caffeine</pattern>
-                  <shadedPattern>me.egg82.extern.com.github.benmanes.caffeine</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>com.google.common</pattern>
-                  <shadedPattern>me.egg82.extern.com.google.common</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>com.googlecode.concurrentlinkedhashmap</pattern>
-                  <shadedPattern>me.egg82.extern.com.googlecode.concurrentlinkedhashmap</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>it.unimi.dsi.fastutil</pattern>
-                  <shadedPattern>me.egg82.extern.it.unimi.dsi.fastutil</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>javassist</pattern>
-                  <shadedPattern>me.egg82.extern.javassist</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>javax.annotation</pattern>
-                  <shadedPattern>me.egg82.extern.javax.annotation</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>net.jcip</pattern>
-                  <shadedPattern>me.egg82.extern.net.jcip</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>net.jodah.expiringmap</pattern>
-                  <shadedPattern>me.egg82.extern.net.jodah.expiringmap</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>org.apache.commons</pattern>
-                  <shadedPattern>me.egg82.extern.org.apache.commons</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>org.json</pattern>
-                  <shadedPattern>me.egg82.extern.org.json</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>org.reflections</pattern>
-                  <shadedPattern>me.egg82.extern.org.reflections</shadedPattern>
-                </relocation>
-                <relocation>
                   <pattern>org.slf4j</pattern>
                   <shadedPattern>me.egg82.extern.org.slf4j</shadedPattern>
                 </relocation>
@@ -111,55 +67,14 @@
   </repositories>
   <dependencies>
     <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
-      <version>2.6</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-codec</groupId>
-      <artifactId>commons-codec</artifactId>
-      <version>1.11</version>
-    </dependency>
-    <dependency>
-      <groupId>org.json</groupId>
-      <artifactId>json</artifactId>
-      <version>20180130</version>
-    </dependency>
-    <dependency>
-      <groupId>org.reflections</groupId>
-      <artifactId>reflections</artifactId>
-      <!-- Need this version if we ever want to make Bukkit plugins that are back-compat -->
-      <version>0.9.10</version>
-    </dependency>
-    <dependency>
-	  <groupId>org.slf4j</groupId>
-	  <artifactId>slf4j-api</artifactId>
-	  <version>1.7.25</version>
-	</dependency>
-	<dependency>
       <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-simple</artifactId>
+      <artifactId>slf4j-api</artifactId>
       <version>1.7.25</version>
     </dependency>
     <dependency>
-      <groupId>net.jodah</groupId>
-      <artifactId>expiringmap</artifactId>
-      <version>0.5.8</version>
-    </dependency>
-    <dependency>
-      <groupId>com.googlecode.concurrentlinkedhashmap</groupId>
-      <artifactId>concurrentlinkedhashmap-lru</artifactId>
-      <version>1.4.2</version>
-    </dependency>
-    <dependency>
-      <groupId>co.aikar</groupId>
-      <artifactId>fastutil-lite</artifactId>
-      <version>1.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.github.ben-manes.caffeine</groupId>
-      <artifactId>caffeine</artifactId>
-      <version>2.6.2</version>
+      <groupId>ninja.egg82.lib</groupId>
+      <artifactId>collections-lib</artifactId>
+      <version>1.0.0</version>
     </dependency>
   </dependencies>
   <description>Base library, full of goodies</description>

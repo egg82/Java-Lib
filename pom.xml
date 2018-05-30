@@ -9,10 +9,20 @@
     <sourceDirectory>src</sourceDirectory>
   </build>
   <modules>
+    <module>Util-Lib</module>
+	<module>Reflect-Lib</module>
+    <module>Threading-Lib</module>
+    <module>Service-Lib</module>
+    <module>Event-Lib</module>
+	<module>Command-Lib</module>
+    <module>Collections-Lib</module>
+	<module>Extended-Collections-Lib</module>
     <module>Egg82-Lib</module>
     <module>SQL-Lib</module>
     <module>Crypto-Lib</module>
 	<module>Exception-Lib</module>
+	<module>FSM-Lib</module>
+	<module>Lang-Lib</module>
   </modules>
   <description>Library for making standard Java operations easier</description>
   <url>https://www.egg82.ninja</url>

@@ -17,8 +17,6 @@ import org.json.JSONObject;
 
 import ninja.egg82.crypto.CryptoHelper;
 import ninja.egg82.crypto.ICryptoHelper;
-import ninja.egg82.exceptions.ArgumentNullException;
-import ninja.egg82.patterns.ServiceLocator;
 import ninja.egg82.utils.ThreadUtil;
 
 public class GameAnalyticsAPI {
@@ -29,7 +27,7 @@ public class GameAnalyticsAPI {
 	private String secretKey = null;
 	private String version = null;
 	
-	private ICryptoHelper cryptoHelper = ServiceLocator.getService(ICryptoHelper.class);
+	private ICryptoHelper cryptoHelper = new CryptoHelper();
 	
 	private int tsOffset = 0;
 	private boolean doSend = false;
@@ -39,21 +37,16 @@ public class GameAnalyticsAPI {
 	//constructor
 	public GameAnalyticsAPI(String gameKey, String secretKey, String version, String userId) {
 		if (gameKey == null) {
-			throw new ArgumentNullException("gameKey");
+			throw new IllegalArgumentException("gameKey cannot be null.");
 		}
 		if (secretKey == null) {
-			throw new ArgumentNullException("secretKey");
+			throw new IllegalArgumentException("secretKey cannot be null.");
 		}
 		if (version == null) {
-			throw new ArgumentNullException("version");
+			throw new IllegalArgumentException("version cannot be null.");
 		}
 		if (userId == null) {
-			throw new ArgumentNullException("userId");
-		}
-		
-		if (cryptoHelper == null) {
-			ServiceLocator.provideService(CryptoHelper.class, false);
-			cryptoHelper = ServiceLocator.getService(ICryptoHelper.class);
+			throw new IllegalArgumentException("userId cannot be null.");
 		}
 		
 		this.gameKey = gameKey;
@@ -70,7 +63,7 @@ public class GameAnalyticsAPI {
 	}
 	public void handleUncaughtErrors(Thread thread) {
 		if (thread == null) {
-			throw new ArgumentNullException("thread");
+			throw new IllegalArgumentException("thread cannot be null.");
 		}
 		thread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
 			public void uncaughtException(Thread t, Throwable ex) {
@@ -80,7 +73,7 @@ public class GameAnalyticsAPI {
 	}
 	public void unhandleUncaughtErrors(Thread thread) {
 		if (thread == null) {
-			throw new ArgumentNullException("thread");
+			throw new IllegalArgumentException("thread cannot be null.");
 		}
 		thread.setUncaughtExceptionHandler(null);
 	}
@@ -90,27 +83,27 @@ public class GameAnalyticsAPI {
 	}
 	public void log(Throwable ex, Level logLevel) {
 		if (ex == null) {
-			throw new ArgumentNullException("ex");
+			throw new IllegalArgumentException("ex cannot be null.");
 		}
 		if (logLevel == null) {
-			throw new ArgumentNullException("logLevel");
+			throw new IllegalArgumentException("logLevel cannot be null.");
 		}
 		
 		sendError(getTraceString(ex), getLevelString(logLevel), 0);
 	}
 	public void log(String message) {
 		if (message == null) {
-			throw new ArgumentNullException("message");
+			throw new IllegalArgumentException("message cannot be null.");
 		}
 		
 		sendError(message, parseLevelString(message), 0);
 	}
 	public void log(String message, Level logLevel) {
 		if (message == null) {
-			throw new ArgumentNullException("message");
+			throw new IllegalArgumentException("message cannot be null.");
 		}
 		if (logLevel == null) {
-			throw new ArgumentNullException("logLevel");
+			throw new IllegalArgumentException("logLevel cannot be null.");
 		}
 		
 		sendError(message, getLevelString(logLevel), 0);
