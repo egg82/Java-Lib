@@ -1,33 +1,23 @@
 package ninja.egg82.sql;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
-import java.lang.reflect.Method;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.sql.Connection;
-import java.sql.Driver;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.Properties;
+import java.util.UUID;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.UUID;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-
-import org.apache.commons.lang.NotImplementedException;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 import ninja.egg82.concurrent.DynamicConcurrentDeque;
 import ninja.egg82.concurrent.FixedConcurrentDeque;
@@ -37,14 +27,13 @@ import ninja.egg82.core.SQLData;
 import ninja.egg82.core.SQLError;
 import ninja.egg82.core.SQLFileUtil;
 import ninja.egg82.core.SQLQueueData;
-import ninja.egg82.enums.BaseSQLType;
 import ninja.egg82.enums.SQLType;
 import ninja.egg82.events.SQLEventArgs;
 import ninja.egg82.patterns.events.EventArgs;
 import ninja.egg82.patterns.events.EventHandler;
 import ninja.egg82.utils.ThreadUtil;
 
-public class MySQL implements ISQL {
+public class Hikari implements ISQL {
 	//vars
 	
 	// Event handlers
@@ -71,80 +60,19 @@ public class MySQL implements ISQL {
 	// Connected state. Atomic because multithreading is HARD
 	private AtomicBoolean connected = new AtomicBoolean(false);
 	
-	// Double-lock, preventing race conditions in a multi-threaded environment
-	private static Lock objLock = new ReentrantLock();
-	// Connection method for the SQL driver, since we use a class loader for the SQL connections
-	private volatile static Method m = null;
-	// Class loader for SQL connections. Default is system, but may change depending
-	private volatile static ClassLoader loader = ClassLoader.getSystemClassLoader();
-	// The jar (or in this case zip) file to download and use for dep injection in case we need it
-	private static final String MYSQL_JAR = "https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.45.zip";
+	private SQLType type = null;
 	
-	private String address = null;
-	private int port = 0;
-	private String user = null;
-	private String pass = null;
-	private String dbName = null;
+	private HikariDataSource hikari = null;
 	
 	//constructor
-	public MySQL(int numConnections, String threadName) {
-		this(numConnections, threadName, null);
-	}
-	public MySQL(int numConnections, String threadName, ClassLoader customLoader) {
+	public Hikari(int numConnections, String threadName, SQLType type) {
 		if (numConnections < 2) {
 			numConnections = 2;
 		}
 		freeConnections = new FixedConcurrentDeque<Connection>(numConnections);
 		
 		this.threadName = threadName;
-		
-		// Check to see if MySQL is loaded
-		objLock.lock();
-		if (m == null || loader == null) {
-			boolean good = false;
-			
-			// Try loading from the default system ClassLoader
-			try {
-				Class.forName("com.mysql.jdbc.Driver", true, loader);
-				
-				m = DriverManager.class.getDeclaredMethod("getConnection", String.class, Properties.class, Class.class);
-				m.setAccessible(true);
-				
-				DriverManager.registerDriver((Driver) Class.forName("com.mysql.jdbc.Driver", true, loader).newInstance());
-				good = true;
-			} catch (Exception ex) {
-				
-			}
-			// Try loading from the custom ClassLoader supplied, if any
-			if (!good && customLoader != null) {
-				loader = customLoader;
-				try {
-					Class.forName("com.mysql.jdbc.Driver", true, loader);
-					
-					m = DriverManager.class.getDeclaredMethod("getConnection", String.class, Properties.class, Class.class);
-					m.setAccessible(true);
-					
-					DriverManager.registerDriver((Driver) Class.forName("com.mysql.jdbc.Driver", true, loader).newInstance());
-					good = true;
-				} catch (Exception ex) {
-					
-				}
-			}
-			// Fallback, download MySQL and inject it. Then load it from there
-			if (!good) {
-				File file = getMySQLFile();
-				try {
-					loader = new URLClassLoader(new URL[] {file.toURI().toURL()});
-					m = DriverManager.class.getDeclaredMethod("getConnection", String.class, Properties.class, Class.class);
-					m.setAccessible(true);
-					
-					DriverManager.registerDriver((Driver) Class.forName("com.mysql.jdbc.Driver", true, loader).newInstance());
-				} catch (Exception ex2) {
-					
-				}
-			}
-		}
-		objLock.unlock();
+		this.type = type;
 	}
 	
 	//public
@@ -162,39 +90,74 @@ public class MySQL implements ISQL {
 		// Disconnect if already connected
 		disconnect();
 		
-		this.address = address;
-		this.port = port;
-		this.user = user;
-		this.pass = pass;
-		this.dbName = dbName;
-		
-		// Add connection properties
-		Properties props = new Properties();
-		props.put("user", user);
-		props.put("password", pass);
-		props.put("useUnicode", "true");
-		props.put("characterEncoding", "UTF-8");
-		props.put("failOverReadOnly", "false");
+		// Connection properties + pool
+		HikariConfig config = new HikariConfig();
+		config.setJdbcUrl("jdbc:mysql://" + address + ":" + port + "/" + dbName);
+		config.setUsername(user);
+		config.setPassword(pass);
+		hikari = new HikariDataSource(config);
 		
 		// Connect to the database
 		while (freeConnections.getRemainingCapacity() > 0) {
 			try {
-				freeConnections.add((Connection) m.invoke(null, "jdbc:mysql://" + address + ":" + port + "/" + dbName, props, Class.forName("com.mysql.jdbc.Driver", true, loader)));
+				freeConnections.add(hikari.getConnection());
 			} catch (Exception ex) {
 				throw new RuntimeException("Could not connect to database.", ex);
 			}
 		}
 		
 		// Create the thread pool. Why here instead of the constructor? Because we call shutdown() on this pool in disconnect
-		threadPool = ThreadUtil.createScheduledPool(1, freeConnections.size(), 120L * 1000L, new ThreadFactoryBuilder().setNameFormat(threadName + "-MySQL-%d").build());
+		threadPool = ThreadUtil.createScheduledPool(1, freeConnections.size(), 120L * 1000L, new ThreadFactoryBuilder().setNameFormat(threadName + "-Hikari-MySQL-%d").build());
 		
 		// Start the flush timer and set the connected state
 		threadPool.scheduleAtFixedRate(onBacklogThread, 250L, 250L, TimeUnit.MILLISECONDS);
 		connected.set(true);
 		connect.invoke(this, EventArgs.EMPTY);
 	}
+	
 	public void connect(String filePath) {
-		throw new NotImplementedException("This database type does not support internal (file) databases.");
+		if (filePath == null || filePath.isEmpty()) {
+			throw new IllegalArgumentException("filePath cannot be null or empty.");
+		}
+		
+		disconnect();
+		
+		File file = new File(filePath);
+		
+		// Create the directory and file structure, if needed
+		if (!SQLFileUtil.pathExists(file)) {
+			try {
+				SQLFileUtil.createFile(file);
+			} catch (Exception ex) {
+				throw new RuntimeException("Could not create database file.", ex);
+			}
+		} else {
+			if (!SQLFileUtil.pathIsFile(file)) {
+				throw new RuntimeException("filePath is not a valid file.");
+			}
+		}
+		
+		// Connection properties + pool
+		HikariConfig config = new HikariConfig();
+		config.setJdbcUrl("jdbc:sqlite:" + file.getAbsolutePath());
+		hikari = new HikariDataSource(config);
+		
+		// Connect to the database
+		while (freeConnections.getRemainingCapacity() > 0) {
+			try {
+				freeConnections.add(hikari.getConnection());
+			} catch (Exception ex) {
+				throw new RuntimeException("Could not connect to database.", ex);
+			}
+		}
+		
+		// Create the thread pool. Why here instead of the constructor? Because we call shutdown() on this pool in disconnect
+		threadPool = ThreadUtil.createScheduledPool(1, freeConnections.size(), 120L * 1000L, new ThreadFactoryBuilder().setNameFormat(threadName + "-Hikari-SQlite-%d").build());
+		
+		// Start the flush timer and set the connected state
+		threadPool.scheduleAtFixedRate(onBacklogThread, 250L, 250L, TimeUnit.MILLISECONDS);
+		connected.set(true);
+		connect.invoke(this, EventArgs.EMPTY);
 	}
 	
 	public void disconnect() {
@@ -245,6 +208,8 @@ public class MySQL implements ISQL {
 			}
 		}
 		
+		hikari.close();
+		
 		disconnect.invoke(this, EventArgs.EMPTY);
 	}
 	
@@ -282,7 +247,7 @@ public class MySQL implements ISQL {
 	}
 	
 	public SQLType getType() {
-		return BaseSQLType.MySQL;
+		return type;
 	}
 	
 	//private
@@ -747,21 +712,13 @@ public class MySQL implements ISQL {
 			
 		}
 		
-		// Add connection properties
-		Properties props = new Properties();
-		props.put("user", user);
-		props.put("password", pass);
-		props.put("useUnicode", "true");
-		props.put("characterEncoding", "UTF-8");
-		props.put("failOverReadOnly", "false");
-		
 		boolean good = true;
 		do {
 			good = true;
 			
 			// Reconnect
 			try {
-				conn = (Connection) m.invoke(null, "jdbc:mysql://" + address + ":" + port + "/" + dbName, props, Class.forName("com.mysql.jdbc.Driver", true, loader));
+				conn = hikari.getConnection();
 			} catch (Exception ex2) {
 				good = false;
 			}
@@ -786,62 +743,5 @@ public class MySQL implements ISQL {
 			return true;
 		}
 		return contains(needle, cause.getCause());
-	}
-	
-	private static File getMySQLFile() {
-		// The directory and file name of the downloaded jar
-		File file = new File(new File("libs"), "mysql.jar");
-		
-		// Make sure the directory and file structure is what we expect
-		if (SQLFileUtil.pathExists(file) && !SQLFileUtil.pathIsFile(file)) {
-			SQLFileUtil.deleteDirectory(file);
-		}
-		// If the file doesn't already exist, download it
-		if (!SQLFileUtil.pathExists(file)) {
-			URL url = null;
-			try {
-				// Create the directory structure, if needed
-				File d = new File(file.getParent());
-	    		d.mkdirs();
-				
-	    		// Download the zip
-				url = new URL(MYSQL_JAR);
-				ZipInputStream zip = new ZipInputStream(url.openStream());
-				ZipEntry entry = null;
-				
-				// Iterate the zip file and look for the MySQL jar
-				do {
-					entry = zip.getNextEntry();
-					if (entry != null && (entry.getName().equals("mysql-connector-java-5.1.45\\mysql-connector-java-5.1.45-bin.jar") || entry.getName().equals("mysql-connector-java-5.1.45/mysql-connector-java-5.1.45-bin.jar"))) {
-						break;
-					}
-				} while (entry != null);
-				
-				if (entry == null) {
-					// We didn't find the MySQL jar
-					zip.close();
-					return file;
-				}
-				
-				// Create a new FileOutputStream to extract the compressed jar to
-				OutputStream out = new FileOutputStream(file);
-				
-				// Write the jar file to disk
-				byte[] buffer = new byte[1024];
-				int len = zip.read(buffer);
-				while (len != -1) {
-					out.write(buffer, 0, len);
-					len = zip.read(buffer);
-				}
-				
-				// Cleanup
-				out.close();
-				zip.close();
-			} catch (Exception ex) {
-				
-			}
-		}
-		
-		return file;
 	}
 }

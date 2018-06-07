@@ -19,6 +19,7 @@
 	<module>Extended-Collections-Lib</module>
     <module>Egg82-Lib</module>
     <module>SQL-Lib</module>
+	<module>Extended-SQL-Lib</module>
     <module>Crypto-Lib</module>
 	<module>Exception-Lib</module>
 	<module>FSM-Lib</module>

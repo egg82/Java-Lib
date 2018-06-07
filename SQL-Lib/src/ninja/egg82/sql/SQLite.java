@@ -141,10 +141,6 @@ public class SQLite implements ISQL {
 		}
 		objLock.unlock();
 	}
-	public void finalize() {
-		// Shutdown with garbage collection. This should never really happen, but hey.
-		disconnect();
-	}
 	
 	//public
 	public void connect(String address, String user, String pass, String dbName) {
@@ -157,6 +153,9 @@ public class SQLite implements ISQL {
 		if (filePath == null || filePath.isEmpty()) {
 			throw new IllegalArgumentException("filePath cannot be null or empty.");
 		}
+		
+		// Disconnect if already connected
+		disconnect();
 		
 		this.file = new File(filePath);
 		
@@ -176,7 +175,7 @@ public class SQLite implements ISQL {
 		// Connect to the database
 		while (freeConnections.getRemainingCapacity() > 0) {
 			try {
-				freeConnections.add((Connection) m.invoke(null, "jdbc:sqlite:" + filePath, new Properties(), Class.forName("org.sqlite.JDBC", true, loader)));
+				freeConnections.add((Connection) m.invoke(null, "jdbc:sqlite:" + file.getAbsolutePath(), new Properties(), Class.forName("org.sqlite.JDBC", true, loader)));
 			} catch (Exception ex) {
 				throw new RuntimeException("Could not connect to database.", ex);
 			}

@@ -1,4 +1,4 @@
-package ninja.egg82.primitive.doubles;
+package ninja.egg82.primitive.shorts;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -7,49 +7,49 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
-public abstract class AbstractDoubleList extends AbstractDoubleCollection implements DoubleList, DoubleStack {
+public abstract class AbstractShortList extends AbstractShortCollection implements ShortList, ShortStack {
 	//vars
 	
 	//constructor
-	protected AbstractDoubleList() {
+	protected AbstractShortList() {
 		super();
 	}
 	
 	//public
 	@Deprecated
-	public DoubleListIterator doubleListIterator() {
+	public ShortListIterator shortListIterator() {
 		return listIterator();
 	}
 	@Deprecated
-	public DoubleListIterator doubleListIterator(final int index) {
+	public ShortListIterator shortListIterator(final int index) {
 		return listIterator(index);
 	}
-	public DoubleListIterator iterator() {
+	public ShortListIterator iterator() {
 		return listIterator();
 	}
-	public DoubleListIterator listIterator() {
+	public ShortListIterator listIterator() {
 		return listIterator(0);
 	}
-	public DoubleListIterator listIterator(final int index) {
-		return new AbstractDoubleListIterator() {
+	public ShortListIterator listIterator(final int index) {
+		return new AbstractShortListIterator() {
 			int pos = index, last = -1;
 			public boolean hasNext() {
-				return pos < AbstractDoubleList.this.size();
+				return pos < AbstractShortList.this.size();
 			}
 			public boolean hasPrevious() {
 				return pos > 0;
 			}
-			public double nextDouble() {
+			public short nextShort() {
 				if (!hasNext()) {
 					throw new NoSuchElementException();
 				}
-				return AbstractDoubleList.this.getDouble(last = pos++);
+				return AbstractShortList.this.getShort(last = pos++);
 			}
-			public double previousDouble() {
+			public short previousShort() {
 				if (!hasPrevious()) {
 					throw new NoSuchElementException();
 				}
-				return AbstractDoubleList.this.getDouble(last = --pos);
+				return AbstractShortList.this.getShort(last = --pos);
 			}
 			public int nextIndex() {
 				return pos;
@@ -57,24 +57,24 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 			public int previousIndex() {
 				return pos - 1;
 			}
-			public void add(double k) {
+			public void add(short k) {
 				if (last == -1) {
 					throw new IllegalStateException();
 				}
-				AbstractDoubleList.this.add(pos++, k);
+				AbstractShortList.this.add(pos++, k);
 				last = -1;
 			}
-			public void set(double k) {
+			public void set(short k) {
 				if (last == -1) {
 					throw new IllegalStateException();
 				}
-				AbstractDoubleList.this.set(last, k);
+				AbstractShortList.this.set(last, k);
 			}
 			public void remove() {
 				if (last == -1) {
 					throw new IllegalStateException();
 				}
-				AbstractDoubleList.this.removeDouble( last );
+				AbstractShortList.this.removeShort( last );
 				if (last < pos) {
 					pos--;
 				}
@@ -83,21 +83,21 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 		};
 	}
 	
-	public void add(final int index, final double k) {
+	public void add(final int index, final short k) {
 		throw new UnsupportedOperationException();
 	}
-	public boolean add(final double k) {
+	public boolean add(final short k) {
 		add(size(), k);
 		return true;
 	}
-	public double removeDouble(int i) {
+	public short removeShort(int i) {
 		throw new UnsupportedOperationException();
 	}
-	public double set(final int index, final double k) {
+	public short set(final int index, final short k) {
 		throw new UnsupportedOperationException();
 	}
 	
-	public boolean addAll(int index, final Collection<? extends Double> c) {
+	public boolean addAll(int index, final Collection<? extends Short> c) {
 		ensureIndex(index);
 		int n = c.size();
 		
@@ -105,36 +105,36 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 			return false;
 		}
 		
-		Iterator<? extends Double> i = c.iterator();
+		Iterator<? extends Short> i = c.iterator();
 		while (n-- != 0) {
 			add(index++, i.next());
 		}
 		return true;
 	}
-	public boolean addAll(final Collection<? extends Double> c) {
+	public boolean addAll(final Collection<? extends Short> c) {
 		return addAll(size(), c);
 	}
 	
-	public boolean contains(final double k) {
+	public boolean contains(final short k) {
 		return indexOf(k) >= 0;
 	}
 	
-	public int indexOf(final double k) {
-		final DoubleListIterator i = listIterator();
-		double e;
+	public int indexOf(final short k) {
+		final ShortListIterator i = listIterator();
+		short e;
 		while (i.hasNext()) {
-			e = i.nextDouble();
+			e = i.nextShort();
 			if (k == e) {
 				return i.previousIndex();
 			}
 		}
 		return -1;
 	}
-	public int lastIndexOf(final double k) {
-		DoubleListIterator i = listIterator( size() );
-		double e;
+	public int lastIndexOf(final short k) {
+		ShortListIterator i = listIterator( size() );
+		short e;
 		while (i.hasPrevious()) {
-			e = i.previousDouble();
+			e = i.previousShort();
 			if (k == e) {
 				return i.nextIndex();
 			}
@@ -146,7 +146,7 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 		int i = size();
 		if (size > i) {
 			while (i++ < size) {
-				add(0.0d);
+				add((short) 0);
 			}
 		} else {
 			while (i-- != size) {
@@ -155,23 +155,23 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 		}
 	}
 	
-	public DoubleList subList(final int from, final int to) {
+	public ShortList subList(final int from, final int to) {
 		ensureIndex(from);
 		ensureIndex(to);
 		if (from > to) {
 			throw new IndexOutOfBoundsException( "Start index (" + from + ") is greater than end index (" + to + ")" );
 		}
 		
-		return new DoubleSubList(this, from, to);
+		return new ShortSubList(this, from, to);
 	}
 	@Deprecated
-	public DoubleList doubleSubList(final int from, final int to) {
+	public ShortList shortSubList(final int from, final int to) {
 		return subList(from, to);
 	}
 	
 	public void removeElements(final int from, final int to) {
 		ensureIndex(to);
-		DoubleListIterator i = listIterator(from);
+		ShortListIterator i = listIterator(from);
 		int n = to - from;
 		
 		if (n < 0) {
@@ -179,11 +179,11 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 		}
 		
 		while (n-- != 0) {
-			i.nextDouble();
+			i.nextShort();
 			i.remove();
 		}
 	}
-	public void addElements(int index, final double a[], int offset, int length) {
+	public void addElements(int index, final short a[], int offset, int length) {
 		ensureIndex(index);
 		if (offset < 0) {
 			throw new ArrayIndexOutOfBoundsException( "Offset (" + offset + ") is negative" );
@@ -195,12 +195,12 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 			add(index++, a[offset++]);
 		}
 	}
-	public void addElements(final int index, final double a[]) {
+	public void addElements(final int index, final short a[]) {
 		addElements(index, a, 0, a.length);
 	}
 	
-	public void getElements(final int from, final double a[], int offset, int length) {
-		DoubleListIterator i = listIterator(from);
+	public void getElements(final int from, final short a[], int offset, int length) {
+		ShortListIterator i = listIterator(from);
 		if (offset < 0) {
 			throw new ArrayIndexOutOfBoundsException( "Offset (" + offset + ") is negative" );
 		}
@@ -211,7 +211,7 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 			throw new IndexOutOfBoundsException( "End index (" + ( from + length ) + ") is greater than list size (" + size() + ")" );
 		}
 		while (length-- != 0) {
-			a[offset++] = i.nextDouble();
+			a[offset++] = i.nextShort();
 		}
 	}
 	
@@ -229,11 +229,11 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 			return false;
 		}
 		
-		if (l instanceof DoubleList) {
-			final DoubleListIterator i1 = listIterator();
-			final DoubleListIterator i2 = ((DoubleList) l).listIterator();
+		if (l instanceof ShortList) {
+			final ShortListIterator i1 = listIterator();
+			final ShortListIterator i2 = ((ShortList) l).listIterator();
 			while (s-- != 0) {
-				if (i1.nextDouble() != i2.nextDouble()) {
+				if (i1.nextShort() != i2.nextShort()) {
 					return false;
 				}
 			}
@@ -248,123 +248,123 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 		}
 		return true;
 	 }
-	public int compareTo(final List<? extends Double> l) {
+	public int compareTo(final List<? extends Short> l) {
 		if (l == this) {
 			return 0;
 		}
 		
-		if (l instanceof DoubleList) {
-			final DoubleListIterator i1 = listIterator();
-			final DoubleListIterator i2 = ((DoubleList) l).listIterator();
+		if (l instanceof ShortList) {
+			final ShortListIterator i1 = listIterator();
+			final ShortListIterator i2 = ((ShortList) l).listIterator();
 			int r;
-			double e1;
-			double e2;
+			short e1;
+			short e2;
 			while (i1.hasNext() && i2.hasNext()) {
-				e1 = i1.nextDouble();
-				e2 = i2.nextDouble();
+				e1 = i1.nextShort();
+				e2 = i2.nextShort();
 				if ((r = (e1 < e2 ? -1 : (e1 == e2 ? 0 : 1))) != 0) {
 					return r;
 				}
 			}
 			return i2.hasNext() ? -1 : (i1.hasNext() ? 1 : 0 );
 		}
-		ListIterator<? extends Double> i1 = listIterator();
-		ListIterator<? extends Double> i2 = l.listIterator();
+		ListIterator<? extends Short> i1 = listIterator();
+		ListIterator<? extends Short> i2 = l.listIterator();
 		int r;
 		while (i1.hasNext() && i2.hasNext()) {
-			if ((r = ((Comparable<? super Double>) i1.next()).compareTo(i2.next())) != 0) {
+			if ((r = ((Comparable<? super Short>) i1.next()).compareTo(i2.next())) != 0) {
 				return r;
 			}
 		}
 		return i2.hasNext() ? -1 : (i1.hasNext() ? 1 : 0 );
 	}
 	public int hashCode() {
-		DoubleIterator i = iterator();
+		ShortIterator i = iterator();
 		int h = 1, s = size();
 		while (s-- != 0) {
-			double k = i.nextDouble();
-			h = 31 * Integer.hashCode(h) + Double.hashCode(k);
+			short k = i.nextShort();
+			h = 31 * Integer.hashCode(h) + Short.hashCode(k);
 		}
 		return h;
 	}
 	
-	public void push(double o) {
+	public void push(short o) {
 		add(o);
 	}
-	public double popDouble() {
+	public short popShort() {
 		if (isEmpty()) {
 			throw new NoSuchElementException();
 		}
-		return removeDouble(size() - 1);
+		return removeShort(size() - 1);
 	}
-	public double topDouble() {
+	public short topShort() {
 		if (isEmpty()) {
 			throw new NoSuchElementException();
 		}
-		return getDouble(size() - 1);
+		return getShort(size() - 1);
 	}
-	public double peekDouble(int i) {
-		return getDouble(size() - 1 - i);
+	public short peekShort(int i) {
+		return getShort(size() - 1 - i);
 	}
-	public boolean rem(double k) {
+	public boolean rem(short k) {
 		int index = indexOf(k);
 		if (index == -1) {
 			return false;
 		}
-		removeDouble(index);
+		removeShort(index);
 		return true;
 	}
 	public boolean remove(final Object o) {
-		return rem(((Double) (o)).doubleValue());
+		return rem(((Short) (o)).shortValue());
 	}
-	public boolean addAll(final int index, final DoubleCollection c) {
-		return addAll(index, (Collection<? extends Double>) c);
+	public boolean addAll(final int index, final ShortCollection c) {
+		return addAll(index, (Collection<? extends Short>) c);
 	}
-	public boolean addAll(final int index, final DoubleList l) {
-		return addAll(index, (DoubleCollection) l);
+	public boolean addAll(final int index, final ShortList l) {
+		return addAll(index, (ShortCollection) l);
 	}
-	public boolean addAll(final DoubleCollection c) {
+	public boolean addAll(final ShortCollection c) {
 		return addAll(size(), c);
 	}
-	public boolean addAll(final DoubleList l) {
+	public boolean addAll(final ShortList l) {
 		return addAll(size(), l);
 	}
-	public void add(final int index, final Double ok) {
-		add(index, ok.doubleValue());
+	public void add(final int index, final Short ok) {
+		add(index, ok.shortValue());
 	}
-	public Double set(final int index, final Double ok) {
-		return Double.valueOf(set(index, ok.doubleValue()));
+	public Short set(final int index, final Short ok) {
+		return Short.valueOf(set(index, ok.shortValue()));
 	}
-	public Double get(final int index) {
-		return Double.valueOf(getDouble(index));
+	public Short get(final int index) {
+		return Short.valueOf(getShort(index));
 	}
 	public int indexOf(final Object ok) {
-		return indexOf(((Double) ok).doubleValue());
+		return indexOf(((Short) ok).shortValue());
 	}
 	public int lastIndexOf(final Object ok) {
-		return lastIndexOf(((Double) ok).doubleValue());
+		return lastIndexOf(((Short) ok).shortValue());
 	}
-	public Double remove(final int index) {
-		return Double.valueOf(removeDouble(index));
+	public Short remove(final int index) {
+		return Short.valueOf(removeShort(index));
 	}
-	public void push(Double o) {
-		push(o.doubleValue());
+	public void push(Short o) {
+		push(o.shortValue());
 	}
-	public Double pop() {
-		return Double.valueOf(popDouble());
+	public Short pop() {
+		return Short.valueOf(popShort());
 	}
-	public Double top() {
-		return Double.valueOf(topDouble());
+	public Short top() {
+		return Short.valueOf(topShort());
 	}
-	public Double peek(int i) {
-		return Double.valueOf(peekDouble(i));
+	public Short peek(int i) {
+		return Short.valueOf(peekShort(i));
 	}
 	
 	public String toString() {
 		final StringBuilder s = new StringBuilder();
-		final DoubleIterator i = iterator();
+		final ShortIterator i = iterator();
 		int n = size();
-		double k;
+		short k;
 		boolean first = true;
 		
 		s.append("[");
@@ -375,7 +375,7 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 				s.append(", ");
 			}
 			
-			k = i.nextDouble();
+			k = i.nextShort();
 			s.append(k);
 		}
 		s.append("]");
@@ -383,24 +383,24 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 		return s.toString();
 	}
 	
-	public static class DoubleSubList extends AbstractDoubleList implements Serializable {
+	public static class ShortSubList extends AbstractShortList implements Serializable {
 		//vars
 		private static final boolean ASSERTS = false;
 		private static final long serialVersionUID = -7046029254386353129L;
 		
-		protected final DoubleList l;
+		protected final ShortList l;
 		protected final int from;
 		protected int to;
 		
 		//constructor
-		public DoubleSubList(final DoubleList l, final int from, final int to) {
+		public ShortSubList(final ShortList l, final int from, final int to) {
 			this.l = l;
 			this.from = from;
 			this.to = to;
 		}
 		
 		//public
-		public boolean add(final double k) {
+		public boolean add(final short k) {
 			l.add(to, k);
 			to++;
 			if (ASSERTS) {
@@ -408,7 +408,7 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 			}
 			return true;
 		}
-		public void add(final int index, final double k) {
+		public void add(final int index, final short k) {
 			ensureIndex(index);
 			l.add(from + index, k);
 			to++;
@@ -417,7 +417,7 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 			}
 		}
 		
-		public boolean addAll(final int index, final Collection<? extends Double> c) {
+		public boolean addAll(final int index, final Collection<? extends Short> c) {
 			ensureIndex(index);
 			to += c.size();
 			if (ASSERTS) {
@@ -428,16 +428,16 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 			return l.addAll(from + index, c);
 		}
 		
-		public double getDouble(int index) {
+		public short getShort(int index) {
 			ensureRestrictedIndex(index);
-			return l.getDouble(from + index);
+			return l.getShort(from + index);
 		}
-		public double removeDouble(int index) {
+		public short removeShort(int index) {
 			ensureRestrictedIndex(index);
 			to--;
-			return l.removeDouble(from + index);
+			return l.removeShort(from + index);
 		}
-		public double set(int index, double k) {
+		public short set(int index, short k) {
 			ensureRestrictedIndex(index);
 			return l.set(from + index, k);
 		}
@@ -452,7 +452,7 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 			return to - from;
 		}
 		
-		public void getElements(final int from, final double[] a, final int offset, final int length) {
+		public void getElements(final int from, final short[] a, final int offset, final int length) {
 			ensureIndex(from);
 			if (from + length > size()) {
 				throw new IndexOutOfBoundsException("End index (" + from + length + ") is greater than list size (" + size() + ")");
@@ -468,7 +468,7 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 				assertRange();
 			}
 		}
-		public void addElements(int index, final double a[], int offset, int length) {
+		public void addElements(int index, final short a[], int offset, int length) {
 			ensureIndex(index);
 			l.addElements(this.from + index, a, offset, length);
 			this.to += length;
@@ -477,9 +477,9 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 			}
 		}
 		
-		public DoubleListIterator listIterator(final int index) {
+		public ShortListIterator listIterator(final int index) {
 			ensureIndex(index);
-			return new AbstractDoubleListIterator() {
+			return new AbstractShortListIterator() {
 				int pos = index, last = -1;
 				
 				public boolean hasNext() {
@@ -488,17 +488,17 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 				public boolean hasPrevious() {
 					return pos > 0;
 				}
-				public double nextDouble() {
+				public short nextShort() {
 					if (!hasNext()) {
 						throw new NoSuchElementException();
 					}
-					return l.getDouble(from + (last = pos++));
+					return l.getShort(from + (last = pos++));
 				}
-				public double previousDouble() {
+				public short previousShort() {
 					if (!hasPrevious()) {
 						throw new NoSuchElementException();
 					}
-					return l.getDouble(from + (last = --pos));
+					return l.getShort(from + (last = --pos));
 				}
 				public int nextIndex() {
 					return pos;
@@ -506,17 +506,17 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 				public int previousIndex() {
 					return pos - 1;
 				}
-				public void add(double k) {
+				public void add(short k) {
 					if ( last == -1 ) {
 						throw new IllegalStateException();
 					}
-					DoubleSubList.this.add(pos++, k);
+					ShortSubList.this.add(pos++, k);
 					last = -1;
 					if (ASSERTS) {
 						assertRange();
 					}
 				}
-				public void set(double k) {
+				public void set(short k) {
 					if (last < pos) {
 						pos--;
 					}
@@ -528,32 +528,32 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 			};
 		}
 		
-		public DoubleList subList(final int from, final int to) {
+		public ShortList subList(final int from, final int to) {
 			ensureIndex(from);
 			ensureIndex(to);
 			if (from > to) {
 				throw new IllegalArgumentException( "Start index (" + from + ") is greater than end index (" + to + ")" );
 			}
-			return new DoubleSubList(this, from, to);
+			return new ShortSubList(this, from, to);
 		}
 		
-		public boolean rem(double k) {
+		public boolean rem(short k) {
 			int index = indexOf(k);
 			if (index == -1) {
 				return false;
 			}
 			to--;
-			l.removeDouble(from + index);
+			l.removeShort(from + index);
 			if (ASSERTS) {
 				assertRange();
 			}
 			return true;
 		}
 		public boolean remove(final Object o) {
-			return rem(((Double) o).doubleValue());
+			return rem(((Short) o).shortValue());
 		}
 		
-		public boolean addAll(final int index, final DoubleCollection c) {
+		public boolean addAll(final int index, final ShortCollection c) {
 			ensureIndex(index);
 			to += c.size();
 			if (ASSERTS) {
@@ -563,7 +563,7 @@ public abstract class AbstractDoubleList extends AbstractDoubleCollection implem
 			}
 			return l.addAll(from + index, c);
 		}
-		public boolean addAll(final int index, final DoubleList l) {
+		public boolean addAll(final int index, final ShortList l) {
 			ensureIndex(index);
 			to += l.size();
 			if (ASSERTS) {

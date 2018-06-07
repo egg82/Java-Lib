@@ -283,7 +283,7 @@ public abstract class AbstractCharList extends AbstractCharCollection implements
 		int h = 1, s = size();
 		while (s-- != 0) {
 			char k = i.nextChar();
-			h = 31 * h + k;
+			h = 31 * Integer.hashCode(h) + Character.hashCode(k);
 		}
 		return h;
 	}
