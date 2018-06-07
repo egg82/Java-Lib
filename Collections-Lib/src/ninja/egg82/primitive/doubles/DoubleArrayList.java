@@ -331,6 +331,16 @@ public class DoubleArrayList extends AbstractDoubleList implements RandomAccess,
 		return c;
 	}
 	
+	public boolean equals(final Object o) {
+		if (o == null) {
+			return false;
+		}
+		if (!(o instanceof DoubleArrayList)) {
+			return false;
+		}
+		
+		return equals((DoubleArrayList) o);
+	}
 	public boolean equals(final DoubleArrayList l) {
 		if (l == this) {
 			return true;

@@ -331,6 +331,16 @@ public class CharArrayList extends AbstractCharList implements RandomAccess, Clo
 		return c;
 	}
 	
+	public boolean equals(final Object o) {
+		if (o == null) {
+			return false;
+		}
+		if (!(o instanceof CharArrayList)) {
+			return false;
+		}
+		
+		return equals((CharArrayList) o);
+	}
 	public boolean equals(final CharArrayList l) {
 		if (l == this) {
 			return true;

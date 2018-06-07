@@ -136,13 +136,37 @@ public final class ServiceLocator {
 		if (clazz == null) {
 			return false;
 		}
-		return services.contains(clazz);
+		
+		boolean result = services.contains(clazz);
+		
+		if (!result) {
+			for (Class<?> c : services) {
+				if (ServiceReflectUtil.doesExtend(clazz, c)) {
+					result = true;
+					break;
+				}
+			}
+		}
+		
+		return result;
 	}
 	public static boolean serviceIsInitialized(Class<?> clazz) {
 		if (clazz == null) {
 			return false;
 		}
-		return initializedServices.containsKey(clazz);
+		
+		boolean result = initializedServices.containsKey(clazz);
+		
+		if (!result) {
+			for (Class<?> c : initializedServices.keySet()) {
+				if (ServiceReflectUtil.doesExtend(clazz, c)) {
+					result = true;
+					break;
+				}
+			}
+		}
+		
+		return result;
 	}
 	
 	//private

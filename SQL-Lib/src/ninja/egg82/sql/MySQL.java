@@ -37,6 +37,7 @@ import ninja.egg82.core.SQLData;
 import ninja.egg82.core.SQLError;
 import ninja.egg82.core.SQLFileUtil;
 import ninja.egg82.core.SQLQueueData;
+import ninja.egg82.enums.BaseSQLType;
 import ninja.egg82.enums.SQLType;
 import ninja.egg82.events.SQLEventArgs;
 import ninja.egg82.patterns.events.EventArgs;
@@ -286,7 +287,7 @@ public class MySQL implements ISQL {
 	}
 	
 	public SQLType getType() {
-		return SQLType.MySQL;
+		return BaseSQLType.MySQL;
 	}
 	
 	//private

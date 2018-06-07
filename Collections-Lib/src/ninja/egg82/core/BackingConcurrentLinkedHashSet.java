@@ -83,7 +83,7 @@ final class WrappingIterator<E> implements Iterator<E> {
 		return unmodifiableIterator.hasNext();
 	}
 	public E next() {
-		current = this.next();
+		current = unmodifiableIterator.next();
 		return current;
 	}
 	public void remove() {
