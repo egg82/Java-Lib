@@ -66,8 +66,8 @@ public class Hikari implements ISQL {
 	
 	//constructor
 	public Hikari(int numConnections, String threadName, SQLType type) {
-		if (numConnections < 2) {
-			numConnections = 2;
+		if (numConnections < 1) {
+			numConnections = 1;
 		}
 		freeConnections = new FixedConcurrentDeque<Connection>(numConnections);
 		

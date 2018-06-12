@@ -86,8 +86,8 @@ public class SQLite implements ISQL {
 		this(numConnections, threadName, null);
 	}
 	public SQLite(int numConnections, String threadName, ClassLoader customLoader) {
-		if (numConnections < 2) {
-			numConnections = 2;
+		if (numConnections < 1) {
+			numConnections = 1;
 		}
 		freeConnections = new FixedConcurrentDeque<Connection>(numConnections);
 		
