@@ -77,7 +77,7 @@ public class SQLite implements ISQL {
 	// Class loader for SQL connections. Default is system, but may change depending
 	private volatile static ClassLoader loader = ClassLoader.getSystemClassLoader();
 	// The jar file to download and use for dep injection in case we need it
-	private static final String SQLITE_JAR = "https://bitbucket.org/xerial/sqlite-jdbc/downloads/sqlite-jdbc-3.21.0.jar";
+	private static final String SQLITE_JAR = "https://bitbucket.org/xerial/sqlite-jdbc/downloads/sqlite-jdbc-3.21.1.jar";
 	
 	private File file = null;
 	

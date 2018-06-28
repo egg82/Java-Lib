@@ -78,7 +78,7 @@ public class MySQL implements ISQL {
 	// Class loader for SQL connections. Default is system, but may change depending
 	private volatile static ClassLoader loader = ClassLoader.getSystemClassLoader();
 	// The jar (or in this case zip) file to download and use for dep injection in case we need it
-	private static final String MYSQL_JAR = "https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.45.zip";
+	private static final String MYSQL_JAR = "https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.46.zip";
 	
 	private String address = null;
 	private int port = 0;
@@ -812,7 +812,7 @@ public class MySQL implements ISQL {
 				// Iterate the zip file and look for the MySQL jar
 				do {
 					entry = zip.getNextEntry();
-					if (entry != null && (entry.getName().equals("mysql-connector-java-5.1.45\\mysql-connector-java-5.1.45-bin.jar") || entry.getName().equals("mysql-connector-java-5.1.45/mysql-connector-java-5.1.45-bin.jar"))) {
+					if (entry != null && (entry.getName().equals("mysql-connector-java-5.1.46\\mysql-connector-java-5.1.46-bin.jar") || entry.getName().equals("mysql-connector-java-5.1.46/mysql-connector-java-5.1.46-bin.jar"))) {
 						break;
 					}
 				} while (entry != null);

@@ -12,8 +12,9 @@ import java.net.URL;
 import java.util.UUID;
 import java.util.logging.Level;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 import ninja.egg82.crypto.CryptoHelper;
 import ninja.egg82.crypto.ICryptoHelper;
@@ -33,6 +34,8 @@ public class GameAnalyticsAPI {
 	private boolean doSend = false;
 	private String userId = null;
 	private String sessionId = UUID.randomUUID().toString();
+	
+	private JSONParser parser = new JSONParser();
 	
 	//constructor
 	public GameAnalyticsAPI(String gameKey, String secretKey, String version, String userId) {
@@ -263,9 +266,9 @@ public class GameAnalyticsAPI {
 					in.close();
 					
 					if (code == 200) {
-						JSONObject json = new JSONObject(builder.toString());
-						doSend = json.getBoolean("enabled");
-						tsOffset = (int) ((System.currentTimeMillis() / 1000) - json.getInt("server_ts"));
+						JSONObject json = (JSONObject) parser.parse(builder.toString());
+						doSend = ((Boolean) json.get("enabled")).booleanValue();
+						tsOffset = (int) ((System.currentTimeMillis() / 1000L) - ((Integer) json.get("server_ts")).intValue());
 						if (!doSend) {
 							sendInit();
 							return;
@@ -361,21 +364,22 @@ public class GameAnalyticsAPI {
 		return (retVal != Integer.MAX_VALUE) ? retVal : -1;
 	}
 	
+	@SuppressWarnings("unchecked")
 	private String getJsonString(String message, String level) {
 		JSONArray retVal = new JSONArray();
 		JSONObject error = new JSONObject();
 		
 		// Required
 		error.put("device", System.getProperty("os.name").replaceAll("\\s", ""));
-		error.put("v", 2);
+		error.put("v", Integer.valueOf(2));
 		error.put("user_id", userId);
-		error.put("client_ts", (System.currentTimeMillis() / 1000) - tsOffset);
+		error.put("client_ts", Long.valueOf((System.currentTimeMillis() / 1000L) - tsOffset));
 		error.put("sdk_version", "rest api v2");
 		error.put("os_version", System.getProperty("os.name").toLowerCase());
 		error.put("manufacturer", parseSystemManufacturer(System.getProperty("os.name")));
 		error.put("platform", parseSystemName(System.getProperty("os.name")));
 		error.put("session_id", sessionId);
-		error.put("session_num", 1);
+		error.put("session_num", Integer.valueOf(1));
 		
 		// Optional
 		error.put("build", version);
@@ -385,10 +389,11 @@ public class GameAnalyticsAPI {
 		error.put("severity", level);
 		error.put("message", message);
 		
-		retVal.put(error);
+		retVal.add(error);
 		
 		return retVal.toString();
 	}
+	@SuppressWarnings("unchecked")
 	private String getJsonInitString() {
 		JSONObject retVal = new JSONObject();
 		

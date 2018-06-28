@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>reflect-lib</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
   <name>egg82-reflect-lib</name>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -91,8 +91,7 @@
     <dependency>
       <groupId>org.reflections</groupId>
       <artifactId>reflections</artifactId>
-      <!-- Need this version if we ever want to make Bukkit plugins that are back-compat -->
-      <version>0.9.10</version>
+      <version>0.9.11</version>
     </dependency>
   </dependencies>
   <description>Reflection utilities to make nasty reflection a little more friendly</description>

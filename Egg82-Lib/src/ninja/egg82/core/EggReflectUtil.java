@@ -3,6 +3,7 @@ package ninja.egg82.core;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.List;
 
 public class EggReflectUtil {
 	//vars
@@ -19,7 +20,7 @@ public class EggReflectUtil {
 		}
 		
 		Field[] fields = clazz.getDeclaredFields();
-		ArrayList<Object> returns = new ArrayList<Object>();
+		List<Object> returns = new ArrayList<Object>();
 		
 		for (int i = 0; i < fields.length; i++) {
 			if (!Modifier.isPrivate(fields[i].getModifiers())) {

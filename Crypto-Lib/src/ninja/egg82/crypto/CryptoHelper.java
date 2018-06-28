@@ -6,6 +6,8 @@ import java.security.SecureRandom;
 
 import org.bouncycastle.crypto.BlockCipher;
 import org.bouncycastle.crypto.CipherParameters;
+import org.bouncycastle.crypto.Digest;
+import org.bouncycastle.crypto.Mac;
 import org.bouncycastle.crypto.digests.MD5Digest;
 import org.bouncycastle.crypto.digests.SHA1Digest;
 import org.bouncycastle.crypto.digests.SHA256Digest;
@@ -29,18 +31,18 @@ public final class CryptoHelper implements ICryptoHelper {
 	//vars
 	private static final Charset UTF_8 = Charset.forName("UTF-8");
 	
-	private MD5Digest md5 = new MD5Digest();
-	private SHA1Digest sha1 = new SHA1Digest();
-	private SHA256Digest sha256 = new SHA256Digest();
-	private SHA512Digest sha512 = new SHA512Digest();
+	private Digest md5 = new MD5Digest();
+	private Digest sha1 = new SHA1Digest();
+	private Digest sha256 = new SHA256Digest();
+	private Digest sha512 = new SHA512Digest();
 	
 	private PasswordHasher phpass = new PasswordHasher();
 	
-	private CFBBlockCipher aes = new CFBBlockCipher(new AESEngine(), 8);
-	private CFBBlockCipher triDes = new CFBBlockCipher(new DESedeEngine(), 8);
-	private PKCS7Padding pkcs7 = new PKCS7Padding();
+	private BlockCipher aes = new CFBBlockCipher(new AESEngine(), 8);
+	private BlockCipher triDes = new CFBBlockCipher(new DESedeEngine(), 8);
+	private BlockCipherPadding pkcs7 = new PKCS7Padding();
 	
-	private HMac hmac = new HMac(new SHA256Digest());
+	private Mac hmac = new HMac(new SHA256Digest());
 	
 	private SecureRandom rng = new SecureRandom();
 	
