@@ -3,11 +3,9 @@ package ninja.egg82.utils;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -26,7 +24,7 @@ public class ThreadUtil {
 	private static final Logger logger = Logger.getLogger("ninja.egg82.utils.ThreadUtil");
 	
 	// Thread pools
-	private static volatile ThreadPoolExecutor dynamicPool = createDynamicPool(new ThreadFactoryBuilder().setNameFormat("egg82-dynamic-%d").build());
+	private static volatile MinMaxThreadPoolExecutor dynamicPool = createDynamicPool(new ThreadFactoryBuilder().setNameFormat("egg82-dynamic-%d").build());
 	private static volatile ScheduledExecutorService singlePool = null;
 	private static ThreadFactory singleThreadFactory = new ThreadFactoryBuilder().setNameFormat("egg82-single_scheduled-%d").build();
 	private static volatile MinMaxScheduledThreadPoolExecutor scheduledPool = createScheduledPool(new ThreadFactoryBuilder().setNameFormat("egg82-scheduled-%d").build());
@@ -162,13 +160,9 @@ public class ThreadUtil {
 	}
 	
 	//private
-	private static ThreadPoolExecutor createDynamicPool(ThreadFactory threadFactory) {
+	private static MinMaxThreadPoolExecutor createDynamicPool(ThreadFactory threadFactory) {
 		// Create a pool starting at 1 and ending at the number of available processors. Kill new threads after 30s if nothing new comes in
-		ThreadPoolExecutor retVal = new ThreadPoolExecutor(1, Runtime.getRuntime().availableProcessors(), 30L * 1000L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), threadFactory);
-		// Allow the core threads to terminate just like the non-core threads
-		retVal.allowCoreThreadTimeOut(true);
-		
-		return retVal;
+		return new MinMaxThreadPoolExecutor(1, Runtime.getRuntime().availableProcessors(), 30L * 1000L, threadFactory);
 	}
 	private static MinMaxScheduledThreadPoolExecutor createScheduledPool(ThreadFactory threadFactory) {
 		// Create a pool starting at 1 and ending at the number of available processors. Kill new threads after 120s if nothing new comes in
