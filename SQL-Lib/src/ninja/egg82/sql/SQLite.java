@@ -95,24 +95,11 @@ public class SQLite implements ISQL {
 		
 		// Check to see if SQLite is loaded
 		objLock.lock();
-		if (m == null || loader == null) {
-			boolean good = false;
-			
-			// Try loading from the default system ClassLoader
-			try {
-				Class.forName("org.sqlite.JDBC", true, loader);
+		try {
+			if (m == null || loader == null) {
+				boolean good = false;
 				
-				m = DriverManager.class.getDeclaredMethod("getConnection", String.class, Properties.class, Class.class);
-				m.setAccessible(true);
-				
-				DriverManager.registerDriver((Driver) Class.forName("org.sqlite.JDBC", true, loader).newInstance());
-				good = true;
-			} catch (Exception ex) {
-				
-			}
-			// Try loading from the custom ClassLoader supplied, if any
-			if (!good && customLoader != null) {
-				loader = customLoader;
+				// Try loading from the default system ClassLoader
 				try {
 					Class.forName("org.sqlite.JDBC", true, loader);
 					
@@ -124,22 +111,40 @@ public class SQLite implements ISQL {
 				} catch (Exception ex) {
 					
 				}
-			}
-			// Fallback, download SQLite and inject it. Then load it from there
-			if (!good) {
-				File file = getSQLiteFile();
-				try {
-					loader = new URLClassLoader(new URL[] {file.toURI().toURL()});
-					m = DriverManager.class.getDeclaredMethod("getConnection", String.class, Properties.class, Class.class);
-					m.setAccessible(true);
-					
-					DriverManager.registerDriver((Driver) Class.forName("org.sqlite.JDBC", true, loader).newInstance());
-				} catch (Exception ex2) {
-					
+				// Try loading from the custom ClassLoader supplied, if any
+				if (!good && customLoader != null) {
+					loader = customLoader;
+					try {
+						Class.forName("org.sqlite.JDBC", true, loader);
+						
+						m = DriverManager.class.getDeclaredMethod("getConnection", String.class, Properties.class, Class.class);
+						m.setAccessible(true);
+						
+						DriverManager.registerDriver((Driver) Class.forName("org.sqlite.JDBC", true, loader).newInstance());
+						good = true;
+					} catch (Exception ex) {
+						
+					}
+				}
+				// Fallback, download SQLite and inject it. Then load it from there
+				if (!good) {
+					File file = getSQLiteFile();
+					try {
+						loader = new URLClassLoader(new URL[] {file.toURI().toURL()});
+						m = DriverManager.class.getDeclaredMethod("getConnection", String.class, Properties.class, Class.class);
+						m.setAccessible(true);
+						
+						DriverManager.registerDriver((Driver) Class.forName("org.sqlite.JDBC", true, loader).newInstance());
+					} catch (Exception ex2) {
+						
+					}
 				}
 			}
+		} catch (Exception ex) {
+			
+		} finally {
+			objLock.unlock();
 		}
-		objLock.unlock();
 	}
 	
 	//public
@@ -182,7 +187,7 @@ public class SQLite implements ISQL {
 		}
 		
 		// Create the thread pool. Why here instead of the constructor? Because we call shutdown() on this pool in disconnect
-		threadPool = ThreadUtil.createScheduledPool(1, freeConnections.size(), 120L * 1000L, new ThreadFactoryBuilder().setNameFormat(threadName + "-SQlite-%d").build());
+		threadPool = ThreadUtil.createScheduledPool(1, freeConnections.size() * 2, 120L * 1000L, new ThreadFactoryBuilder().setNameFormat(threadName + "-SQlite-%d").build());
 		
 		// Start the flush timer and set the connected state
 		threadPool.scheduleAtFixedRate(onBacklogThread, 250L, 250L, TimeUnit.MILLISECONDS);
@@ -521,13 +526,16 @@ public class SQLite implements ISQL {
 				}
 				
 				// Errored on execution, invoke the error method and try sending the next item in the queue
-				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				threadPool.submit(new Runnable() {
+					public void run() {
+						error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+					}
+				});
 				if (!isParallel) {
 					parallelLock.unlock();
 				}
 				sendNext(conn);
 			}
-			
 			return;
 		}
 		
@@ -546,7 +554,11 @@ public class SQLite implements ISQL {
 			}
 			
 			// Errored, invoke the error method and try sending the next item in the queue
-			error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+			threadPool.submit(new Runnable() {
+				public void run() {
+					error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				}
+			});
 			if (!isParallel) {
 				parallelLock.unlock();
 			}
@@ -569,7 +581,11 @@ public class SQLite implements ISQL {
 			}
 			
 			// Errored, invoke the error method and try sending the next item in the queue
-			error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+			threadPool.submit(new Runnable() {
+				public void run() {
+					error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				}
+			});
 			if (!isParallel) {
 				parallelLock.unlock();
 			}
@@ -594,7 +610,11 @@ public class SQLite implements ISQL {
 				}
 				
 				// Errored, invoke the error method and try sending the next item in the queue
-				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				threadPool.submit(new Runnable() {
+					public void run() {
+						error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+					}
+				});
 				if (!isParallel) {
 					parallelLock.unlock();
 				}
@@ -619,7 +639,11 @@ public class SQLite implements ISQL {
 				}
 				
 				// Errored, invoke the error method and try sending the next item in the queue
-				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				threadPool.submit(new Runnable() {
+					public void run() {
+						error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+					}
+				});
 				if (!isParallel) {
 					parallelLock.unlock();
 				}
@@ -653,7 +677,11 @@ public class SQLite implements ISQL {
 				}
 				
 				// Errored, invoke the error method and try sending the next item in the queue
-				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				threadPool.submit(new Runnable() {
+					public void run() {
+						error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+					}
+				});
 				if (!isParallel) {
 					parallelLock.unlock();
 				}
@@ -684,7 +712,11 @@ public class SQLite implements ISQL {
 				}
 				
 				// Errored, invoke the error method and try sending the next item in the queue
-				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				threadPool.submit(new Runnable() {
+					public void run() {
+						error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+					}
+				});
 				if (!isParallel) {
 					parallelLock.unlock();
 				}
@@ -708,7 +740,11 @@ public class SQLite implements ISQL {
 			}
 			
 			// Invoke the data event and try sending the next item in the queue
-			data.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(), d, u));
+			threadPool.submit(new Runnable() {
+				public void run() {
+					data.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(), d, u));
+				}
+			});
 			if (!isParallel) {
 				parallelLock.unlock();
 			}
@@ -725,7 +761,11 @@ public class SQLite implements ISQL {
 			d.columns = new String[0];
 			d.data = new Object[0][];
 			// Invoke the data event and try sending the next item in the queue
-			data.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(), d, u));
+			threadPool.submit(new Runnable() {
+				public void run() {
+					data.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(), d, u));
+				}
+			});
 			if (!isParallel) {
 				parallelLock.unlock();
 			}

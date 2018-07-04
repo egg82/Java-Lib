@@ -107,7 +107,7 @@ public class Hikari implements ISQL {
 		}
 		
 		// Create the thread pool. Why here instead of the constructor? Because we call shutdown() on this pool in disconnect
-		threadPool = ThreadUtil.createScheduledPool(1, freeConnections.size(), 120L * 1000L, new ThreadFactoryBuilder().setNameFormat(threadName + "-Hikari-MySQL-%d").build());
+		threadPool = ThreadUtil.createScheduledPool(1, freeConnections.size() * 2, 120L * 1000L, new ThreadFactoryBuilder().setNameFormat(threadName + "-Hikari-MySQL-%d").build());
 		
 		// Start the flush timer and set the connected state
 		threadPool.scheduleAtFixedRate(onBacklogThread, 250L, 250L, TimeUnit.MILLISECONDS);
@@ -152,7 +152,7 @@ public class Hikari implements ISQL {
 		}
 		
 		// Create the thread pool. Why here instead of the constructor? Because we call shutdown() on this pool in disconnect
-		threadPool = ThreadUtil.createScheduledPool(1, freeConnections.size(), 120L * 1000L, new ThreadFactoryBuilder().setNameFormat(threadName + "-Hikari-SQlite-%d").build());
+		threadPool = ThreadUtil.createScheduledPool(1, freeConnections.size() * 2, 120L * 1000L, new ThreadFactoryBuilder().setNameFormat(threadName + "-Hikari-SQlite-%d").build());
 		
 		// Start the flush timer and set the connected state
 		threadPool.scheduleAtFixedRate(onBacklogThread, 250L, 250L, TimeUnit.MILLISECONDS);
@@ -493,7 +493,11 @@ public class Hikari implements ISQL {
 				}
 				
 				// Errored on execution, invoke the error method and try sending the next item in the queue
-				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				threadPool.submit(new Runnable() {
+					public void run() {
+						error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+					}
+				});
 				if (!isParallel) {
 					parallelLock.unlock();
 				}
@@ -517,7 +521,11 @@ public class Hikari implements ISQL {
 			}
 			
 			// Errored, invoke the error method and try sending the next item in the queue
-			error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+			threadPool.submit(new Runnable() {
+				public void run() {
+					error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				}
+			});
 			if (!isParallel) {
 				parallelLock.unlock();
 			}
@@ -540,7 +548,11 @@ public class Hikari implements ISQL {
 			}
 			
 			// Errored, invoke the error method and try sending the next item in the queue
-			error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+			threadPool.submit(new Runnable() {
+				public void run() {
+					error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				}
+			});
 			if (!isParallel) {
 				parallelLock.unlock();
 			}
@@ -565,7 +577,11 @@ public class Hikari implements ISQL {
 				}
 				
 				// Errored, invoke the error method and try sending the next item in the queue
-				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				threadPool.submit(new Runnable() {
+					public void run() {
+						error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+					}
+				});
 				if (!isParallel) {
 					parallelLock.unlock();
 				}
@@ -590,7 +606,11 @@ public class Hikari implements ISQL {
 				}
 				
 				// Errored, invoke the error method and try sending the next item in the queue
-				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				threadPool.submit(new Runnable() {
+					public void run() {
+						error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+					}
+				});
 				if (!isParallel) {
 					parallelLock.unlock();
 				}
@@ -624,7 +644,11 @@ public class Hikari implements ISQL {
 				}
 				
 				// Errored, invoke the error method and try sending the next item in the queue
-				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				threadPool.submit(new Runnable() {
+					public void run() {
+						error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+					}
+				});
 				if (!isParallel) {
 					parallelLock.unlock();
 				}
@@ -655,7 +679,11 @@ public class Hikari implements ISQL {
 				}
 				
 				// Errored, invoke the error method and try sending the next item in the queue
-				error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				threadPool.submit(new Runnable() {
+					public void run() {
+						error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+					}
+				});
 				if (!isParallel) {
 					parallelLock.unlock();
 				}
@@ -679,7 +707,11 @@ public class Hikari implements ISQL {
 			}
 			
 			// Invoke the data event and try sending the next item in the queue
-			data.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(), d, u));
+			threadPool.submit(new Runnable() {
+				public void run() {
+					data.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(), d, u));
+				}
+			});
 			if (!isParallel) {
 				parallelLock.unlock();
 			}
@@ -696,7 +728,11 @@ public class Hikari implements ISQL {
 			d.columns = new String[0];
 			d.data = new Object[0][];
 			// Invoke the data event and try sending the next item in the queue
-			data.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(), d, u));
+			threadPool.submit(new Runnable() {
+				public void run() {
+					data.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(), d, u));
+				}
+			});
 			if (!isParallel) {
 				parallelLock.unlock();
 			}
