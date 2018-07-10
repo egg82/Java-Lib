@@ -452,8 +452,9 @@ public class Hikari implements ISQL {
 	@SuppressWarnings("resource")
 	private void execute(Connection conn, PreparedStatement command, boolean isParallel, String q, Object[] parameters, Map<String, Object> namedParameters, UUID u) {
 		// Try to execute the statement
+		boolean hasResultSet = false;
 		try {
-			command.execute();
+			hasResultSet = command.execute();
 		} catch (Exception ex) {
 			if (ex.getClass().getSimpleName().equals("CommunicationsException") || ex.getClass().getSimpleName().equals("EOFException") || contains("CommunicationsException", ex.getCause())) {
 				// Release resources
@@ -510,54 +511,58 @@ public class Hikari implements ISQL {
 		SQLData d = new SQLData();
 		
 		// Try to get the number of rows affected
-		try {
-			d.recordsAffected = command.getUpdateCount();
-		} catch (Exception ex) {
-			// Release resources
+		if (!hasResultSet) {
 			try {
-				command.close();
-			} catch (Exception ex2) {
-				
-			}
-			
-			// Errored, invoke the error method and try sending the next item in the queue
-			threadPool.submit(new Runnable() {
-				public void run() {
-					error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				d.recordsAffected = command.getUpdateCount();
+			} catch (Exception ex) {
+				// Release resources
+				try {
+					command.close();
+				} catch (Exception ex2) {
+					
 				}
-			});
-			if (!isParallel) {
-				parallelLock.unlock();
+				
+				// Errored, invoke the error method and try sending the next item in the queue
+				threadPool.submit(new Runnable() {
+					public void run() {
+						error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+					}
+				});
+				if (!isParallel) {
+					parallelLock.unlock();
+				}
+				sendNext(conn);
+				return;
 			}
-			sendNext(conn);
-			return;
 		}
 		
 		// The result set from the query
 		ResultSet results = null;
 		
 		// Try to get the results
-		try {
-			results = command.getResultSet();
-		} catch (Exception ex) {
-			// Release resources
+		if (hasResultSet) {
 			try {
-				command.close();
-			} catch (Exception ex2) {
-				
-			}
-			
-			// Errored, invoke the error method and try sending the next item in the queue
-			threadPool.submit(new Runnable() {
-				public void run() {
-					error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+				results = command.getResultSet();
+			} catch (Exception ex) {
+				// Release resources
+				try {
+					command.close();
+				} catch (Exception ex2) {
+					
 				}
-			});
-			if (!isParallel) {
-				parallelLock.unlock();
+				
+				// Errored, invoke the error method and try sending the next item in the queue
+				threadPool.submit(new Runnable() {
+					public void run() {
+						error.invoke(this, new SQLEventArgs(q, parameters, namedParameters, new SQLError(ex), new SQLData(), u));
+					}
+				});
+				if (!isParallel) {
+					parallelLock.unlock();
+				}
+				sendNext(conn);
+				return;
 			}
-			sendNext(conn);
-			return;
 		}
 		
 		// Do we have a result set?
