@@ -202,9 +202,8 @@ public class VariableExpiringRegistry<K> implements IVariableExpiringRegistry<K>
 				} catch (Exception ex) {
 					throw new RuntimeException("data type cannot be converted to the type specified.", ex);
 				}
-			} else {
-				return (T) pair.getRight().getType();
 			}
+			return (T) pair.getRight().getType();
 		}
 		return null;
 	}
@@ -243,9 +242,8 @@ public class VariableExpiringRegistry<K> implements IVariableExpiringRegistry<K>
 				} catch (Exception ex) {
 					throw new RuntimeException("data type cannot be converted to the type specified.", ex);
 				}
-			} else {
-				return (T) data;
 			}
+			return (T) data;
 		}
 		return null;
 	}

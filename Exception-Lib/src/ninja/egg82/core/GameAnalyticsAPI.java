@@ -159,9 +159,10 @@ public class GameAnalyticsAPI {
 				
 				try {
 					conn.setRequestMethod("POST");
-					OutputStream out = conn.getOutputStream();
-					out.write(postData);
-					out.close();
+					try (OutputStream out = conn.getOutputStream()) {
+						out.write(postData);
+						out.flush();
+					}
 				} catch (Exception ex) {
 					try {
 						Thread.sleep(10000L);
@@ -175,21 +176,17 @@ public class GameAnalyticsAPI {
 				try {
 					int code = conn.getResponseCode();
 					
-					InputStream in = (code == 200) ? conn.getInputStream() : conn.getErrorStream();
-					InputStreamReader reader = new InputStreamReader(in);
-					BufferedReader buffer = new BufferedReader(reader);
-					StringBuilder builder = new StringBuilder();
-					String line = null;
-					while ((line = buffer.readLine()) != null) {
-						builder.append(line);
+					try (InputStream in = (code == 200) ? conn.getInputStream() : conn.getErrorStream(); InputStreamReader reader = new InputStreamReader(in); BufferedReader buffer = new BufferedReader(reader)) {
+						StringBuilder builder = new StringBuilder();
+						String line = null;
+						while ((line = buffer.readLine()) != null) {
+							builder.append(line);
+						}
+						
+						/*if (code == 200) {
+							JSONObject json = new JSONObject(builder.toString());
+						}*/
 					}
-					buffer.close();
-					reader.close();
-					in.close();
-					
-					/*if (code == 200) {
-						JSONObject json = new JSONObject(builder.toString());
-					}*/
 				} catch (Exception ex) {
 					try {
 						Thread.sleep(10000L);
@@ -235,10 +232,10 @@ public class GameAnalyticsAPI {
 				
 				try {
 					conn.setRequestMethod("POST");
-					OutputStream out = conn.getOutputStream();
-					out.write(postData);
-					out.flush();
-					out.close();
+					try (OutputStream out = conn.getOutputStream()) {
+						out.write(postData);
+						out.flush();
+					}
 				} catch (Exception ex) {
 					try {
 						Thread.sleep(10000L);
@@ -253,25 +250,21 @@ public class GameAnalyticsAPI {
 				try {
 					int code = conn.getResponseCode();
 					
-					InputStream in = (code == 200) ? conn.getInputStream() : conn.getErrorStream();
-					InputStreamReader reader = new InputStreamReader(in);
-					BufferedReader buffer = new BufferedReader(reader);
-					StringBuilder builder = new StringBuilder();
-					String line = null;
-					while ((line = buffer.readLine()) != null) {
-						builder.append(line);
-					}
-					buffer.close();
-					reader.close();
-					in.close();
-					
-					if (code == 200) {
-						JSONObject json = (JSONObject) parser.parse(builder.toString());
-						doSend = ((Boolean) json.get("enabled")).booleanValue();
-						tsOffset = (int) ((System.currentTimeMillis() / 1000L) - ((Integer) json.get("server_ts")).intValue());
-						if (!doSend) {
-							sendInit();
-							return;
+					try (InputStream in = (code == 200) ? conn.getInputStream() : conn.getErrorStream(); InputStreamReader reader = new InputStreamReader(in); BufferedReader buffer = new BufferedReader(reader)) {
+						StringBuilder builder = new StringBuilder();
+						String line = null;
+						while ((line = buffer.readLine()) != null) {
+							builder.append(line);
+						}
+						
+						if (code == 200) {
+							JSONObject json = (JSONObject) parser.parse(builder.toString());
+							doSend = ((Boolean) json.get("enabled")).booleanValue();
+							tsOffset = (int) ((System.currentTimeMillis() / 1000L) - ((Integer) json.get("server_ts")).intValue());
+							if (!doSend) {
+								sendInit();
+								return;
+							}
 						}
 					}
 				} catch (Exception ex) {
@@ -303,17 +296,15 @@ public class GameAnalyticsAPI {
 	}
 	
 	private String getTraceString(Throwable ex) {
-		StringWriter writer = new StringWriter();
-		PrintWriter print = new PrintWriter(writer);
-		ex.printStackTrace(print);
-		String str = writer.toString();
-		print.close();
-		try {
-			writer.close();
+		try (StringWriter writer = new StringWriter(); PrintWriter print = new PrintWriter(writer)) {
+			ex.printStackTrace(print);
+			String str = writer.toString();
+			return str;
 		} catch (Exception ex2) {
 			
 		}
-		return str;
+		
+		return null;
 	}
 	
 	private String parseLevelString(String message) {

@@ -77,7 +77,7 @@ public class SQLite implements ISQL {
 	// Class loader for SQL connections. Default is system, but may change depending
 	private volatile static ClassLoader loader = ClassLoader.getSystemClassLoader();
 	// The jar file to download and use for dep injection in case we need it
-	private static final String SQLITE_JAR = "https://bitbucket.org/xerial/sqlite-jdbc/downloads/sqlite-jdbc-3.21.1.jar";
+	private static final String SQLITE_JAR = "https://bitbucket.org/xerial/sqlite-jdbc/downloads/sqlite-jdbc-3.23.1.jar";
 	
 	private File file = null;
 	
@@ -195,6 +195,7 @@ public class SQLite implements ISQL {
 		connect.invoke(this, EventArgs.EMPTY);
 	}
 	
+	@SuppressWarnings("resource")
 	public void disconnect() {
 		// Set connected state to false, or return if it's already false
 		if (!connected.getAndSet(false)) {
@@ -836,11 +837,10 @@ public class SQLite implements ISQL {
 				
 	    		// Download the jar
 				url = new URL(SQLITE_JAR);
-				InputStream in = url.openStream();
-				// Write the jar file to disk
-				Files.copy(in, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-				// Cleanup
-				in.close();
+				try (InputStream in = url.openStream()) {
+					// Write the jar file to disk
+					Files.copy(in, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+				}
 			} catch (Exception ex) {
 				
 			}

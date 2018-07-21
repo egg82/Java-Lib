@@ -293,7 +293,8 @@ public final class FileUtil {
     	
     	close(new File(path));
     }
-    public static void close(File file) throws Exception {
+    @SuppressWarnings("resource")
+	public static void close(File file) throws Exception {
     	if (file == null) {
     		throw new IllegalArgumentException("file cannot be null.");
     	}

@@ -62,11 +62,10 @@ public final class ReflectUtil {
 				
 	    		// Download the jar
 				url = new URL(jarUrl);
-				InputStream in = url.openStream();
-				// Write the jar file to disk
-				Files.copy(in, jarFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-				// Cleanup
-				in.close();
+				try (InputStream in = url.openStream()) {
+					// Write the jar file to disk
+					Files.copy(in, jarFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+				}
 			} catch (Exception ex) {
 				throw new RuntimeException("Could not download file.", ex);
 			}

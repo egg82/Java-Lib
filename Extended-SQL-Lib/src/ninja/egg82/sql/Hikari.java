@@ -160,6 +160,7 @@ public class Hikari implements ISQL {
 		connect.invoke(this, EventArgs.EMPTY);
 	}
 	
+	@SuppressWarnings("resource")
 	public void disconnect() {
 		// Set connected state to false, or return if it's already false
 		if (!connected.getAndSet(false)) {

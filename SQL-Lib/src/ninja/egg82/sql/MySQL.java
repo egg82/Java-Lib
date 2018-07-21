@@ -78,7 +78,7 @@ public class MySQL implements ISQL {
 	// Class loader for SQL connections. Default is system, but may change depending
 	private volatile static ClassLoader loader = ClassLoader.getSystemClassLoader();
 	// The jar (or in this case zip) file to download and use for dep injection in case we need it
-	private static final String MYSQL_JAR = "https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.46.zip";
+	private static final String MYSQL_JAR = "https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-8.0.11.zip";
 	
 	private String address = null;
 	private int port = 0;
@@ -202,6 +202,7 @@ public class MySQL implements ISQL {
 		throw new NotImplementedException("This database type does not support internal (file) databases.");
 	}
 	
+	@SuppressWarnings("resource")
 	public void disconnect() {
 		// Set connected state to false, or return if it's already false
 		if (!connected.getAndSet(false)) {
@@ -868,37 +869,31 @@ public class MySQL implements ISQL {
 				
 	    		// Download the zip
 				url = new URL(MYSQL_JAR);
-				ZipInputStream zip = new ZipInputStream(url.openStream());
-				ZipEntry entry = null;
-				
-				// Iterate the zip file and look for the MySQL jar
-				do {
-					entry = zip.getNextEntry();
-					if (entry != null && (entry.getName().equals("mysql-connector-java-5.1.46\\mysql-connector-java-5.1.46-bin.jar") || entry.getName().equals("mysql-connector-java-5.1.46/mysql-connector-java-5.1.46-bin.jar"))) {
-						break;
+				try (ZipInputStream zip = new ZipInputStream(url.openStream()); OutputStream out = new FileOutputStream(file)) {
+					ZipEntry entry = null;
+					
+					// Iterate the zip file and look for the MySQL jar
+					do {
+						entry = zip.getNextEntry();
+						if (entry != null && (entry.getName().equals("mysql-connector-java-8.0.11\\mysql-connector-java-8.0.11-bin.jar") || entry.getName().equals("mysql-connector-java-8.0.11/mysql-connector-java-8.0.11-bin.jar"))) {
+							break;
+						}
+					} while (entry != null);
+					
+					if (entry == null) {
+						// We didn't find the MySQL jar
+						return file;
 					}
-				} while (entry != null);
-				
-				if (entry == null) {
-					// We didn't find the MySQL jar
-					zip.close();
-					return file;
+					
+					// Write the jar file to disk
+					byte[] buffer = new byte[1024];
+					int len = zip.read(buffer);
+					while (len != -1) {
+						out.write(buffer, 0, len);
+						len = zip.read(buffer);
+					}
 				}
 				
-				// Create a new FileOutputStream to extract the compressed jar to
-				OutputStream out = new FileOutputStream(file);
-				
-				// Write the jar file to disk
-				byte[] buffer = new byte[1024];
-				int len = zip.read(buffer);
-				while (len != -1) {
-					out.write(buffer, 0, len);
-					len = zip.read(buffer);
-				}
-				
-				// Cleanup
-				out.close();
-				zip.close();
 			} catch (Exception ex) {
 				
 			}
