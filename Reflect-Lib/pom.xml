@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>reflect-lib</artifactId>
-  <version>1.0.2</version>
+  <version>1.0.3</version>
   <name>egg82-reflect-lib</name>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -37,33 +37,17 @@
                     <exclude>META-INF/*.RSA</exclude>
                     <exclude>**/*.html</exclude>
                     <exclude>**/*.txt</exclude>
+                    <exclude>junit/**</exclude>
+                    <exclude>org/junit/**</exclude>
+					<exclude>org/hamcrest/**</exclude>
                     <exclude>edu/umd/cs/findbugs/**</exclude>
+                    <exclude>org/checkerframework/**</exclude>
+                    <exclude>afu/**</exclude>
+                    <exclude>org/codehaus/mojo/animal_sniffer/**</exclude>
                   </excludes>
                 </filter>
               </filters>
               <minimizeJar>true</minimizeJar>
-              <relocations>
-                <relocation>
-                  <pattern>com.google</pattern>
-                  <shadedPattern>me.egg82.extern.com.google</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>javassist</pattern>
-                  <shadedPattern>me.egg82.extern.javassist</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>javax.annotation</pattern>
-                  <shadedPattern>me.egg82.extern.javax.annotation</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>net.jcip</pattern>
-                  <shadedPattern>me.egg82.extern.net.jcip</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>org.reflections</pattern>
-                  <shadedPattern>me.egg82.extern.org.reflections</shadedPattern>
-                </relocation>
-              </relocations>
             </configuration>
           </execution>
         </executions>

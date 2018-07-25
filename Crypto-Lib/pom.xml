@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>crypto-lib</artifactId>
-  <version>1.1.6</version>
+  <version>1.1.7</version>
   <name>egg82-crypto-lib</name>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -46,23 +46,17 @@
                     <exclude>META-INF/*.RSA</exclude>
                     <exclude>**/*.html</exclude>
                     <exclude>**/*.txt</exclude>
+                    <exclude>junit/**</exclude>
+                    <exclude>org/junit/**</exclude>
+					<exclude>org/hamcrest/**</exclude>
+                    <exclude>edu/umd/cs/findbugs/**</exclude>
+                    <exclude>org/checkerframework/**</exclude>
+                    <exclude>afu/**</exclude>
+                    <exclude>org/codehaus/mojo/animal_sniffer/**</exclude>
                   </excludes>
                 </filter>
               </filters>
               <minimizeJar>true</minimizeJar>
-              <relocations>
-                <relocation>
-                  <pattern>org.bouncycastle</pattern>
-                  <shadedPattern>me.egg82.extern.org.bouncycastle</shadedPattern>
-                  <excludes>
-                    <exclude>org.bouncycastle.x509.*</exclude>
-                  </excludes>
-                </relocation>
-                <relocation>
-                  <pattern>org.slf4j</pattern>
-                  <shadedPattern>me.egg82.extern.org.slf4j</shadedPattern>
-                </relocation>
-              </relocations>
             </configuration>
           </execution>
         </executions>

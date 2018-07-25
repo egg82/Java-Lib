@@ -3,13 +3,13 @@ package ninja.egg82.filters;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
-
-import ninja.egg82.core.EggReflectUtil;
+import java.util.Iterator;
+import java.util.List;
 
 public class EnumFilter<T> {
 	//vars
-	private T[] types = null;
 	private Class<T> clazz = null;
+	private List<T> currentTypes = null;
 	
 	//constructor
 	@SuppressWarnings("unchecked")
@@ -17,44 +17,59 @@ public class EnumFilter<T> {
 		if (clazz == null) {
 			throw new IllegalArgumentException("clazz cannot be null.");
 		}
+		if (!clazz.isEnum()) {
+			throw new IllegalArgumentException("clazz must be an enum.");
+		}
+		
+		T[] enums = clazz.getEnumConstants();
 		
 		this.clazz = clazz;
-		
-		Object[] enums = EggReflectUtil.getStaticFields(clazz);
-		types = (T[]) Arrays.copyOf(enums, enums.length, ((T[]) Array.newInstance(clazz, 0)).getClass());
+		currentTypes = new ArrayList<T>(Arrays.asList((T[]) Arrays.copyOf(enums, enums.length, ((T[]) Array.newInstance(clazz, 0)).getClass())));
 	}
 	
 	//public
-	public T[] getAllTypes() {
-		return types.clone();
-	}
-	@SuppressWarnings("unchecked")
-	public T[] filter(T[] list, String filter, boolean whitelist) {
-		if (list == null) {
-			throw new IllegalArgumentException("list cannot be null.");
-		}
+	public EnumFilter<T> whitelist(String filter) {
 		if (filter == null) {
 			throw new IllegalArgumentException("filter cannot be null.");
 		}
 		
 		filter = filter.toLowerCase();
 		
-		ArrayList<T> filteredTypes = new ArrayList<T>();
-		
-		for (T s : list) {
+		for (Iterator<T> i = currentTypes.iterator(); i.hasNext();) {
+			T s = i.next();
 			String name = s.toString().toLowerCase();
-			if (whitelist) {
-				if (name.contains(filter)) {
-					filteredTypes.add(s);
-				}
-			} else {
-				if (!name.contains(filter)) {
-					filteredTypes.add(s);
-				}
+			if (!name.contains(filter)) {
+				i.remove();
 			}
 		}
 		
-		return filteredTypes.toArray((T[]) Array.newInstance(clazz, 0));
+		return this;
+	}
+	public EnumFilter<T> blacklist(String filter) {
+		if (filter == null) {
+			throw new IllegalArgumentException("filter cannot be null.");
+		}
+		
+		filter = filter.toLowerCase();
+		
+		for (Iterator<T> i = currentTypes.iterator(); i.hasNext();) {
+			T s = i.next();
+			String name = s.toString().toLowerCase();
+			if (name.contains(filter)) {
+				i.remove();
+			}
+		}
+		
+		return this;
+	}
+	@SuppressWarnings("unchecked")
+	public T[] build() {
+		T[] retVal = (T[]) Array.newInstance(clazz, currentTypes.size());
+		for (int i = 0; i < currentTypes.size(); i++) {
+			retVal[i] = currentTypes.get(i);
+		}
+		
+		return retVal;
 	}
 	
 	//private
