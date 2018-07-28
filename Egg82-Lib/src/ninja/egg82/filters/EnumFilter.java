@@ -1,6 +1,8 @@
 package ninja.egg82.filters;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -17,13 +19,10 @@ public class EnumFilter<T> {
 		if (clazz == null) {
 			throw new IllegalArgumentException("clazz cannot be null.");
 		}
-		if (!clazz.isEnum()) {
-			throw new IllegalArgumentException("clazz must be an enum.");
-		}
-		
-		T[] enums = clazz.getEnumConstants();
 		
 		this.clazz = clazz;
+		
+		T[] enums = (clazz.isEnum()) ? clazz.getEnumConstants() : getStaticFields(clazz);
 		currentTypes = new ArrayList<T>(Arrays.asList((T[]) Arrays.copyOf(enums, enums.length, ((T[]) Array.newInstance(clazz, 0)).getClass())));
 	}
 	
@@ -73,5 +72,25 @@ public class EnumFilter<T> {
 	}
 	
 	//private
-	
+	@SuppressWarnings("unchecked")
+	private T[] getStaticFields(Class<?> clazz) {
+		if (clazz == null) {
+			throw new IllegalArgumentException("clazz cannot be null.");
+		}
+		
+		Field[] fields = clazz.getDeclaredFields();
+		ArrayList<Object> returns = new ArrayList<Object>();
+		
+		for (int i = 0; i < fields.length; i++) {
+			if (!Modifier.isPrivate(fields[i].getModifiers())) {
+				try {
+					returns.add(fields[i].get(null));
+				} catch (Exception ex) {
+					
+				}
+			}
+		}
+		
+		return returns.toArray((T[]) Array.newInstance(clazz, 0));
+	}
 }
