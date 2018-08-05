@@ -1,8 +1,8 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <artifactId>service-lib</artifactId>
-  <version>1.0.3</version>
-  <name>egg82-service-lib</name>
+  <artifactId>analytics-lib</artifactId>
+  <version>1.0.0</version>
+  <name>egg82-analytics-lib</name>
   <build>
     <sourceDirectory>src</sourceDirectory>
     <plugins>
@@ -47,7 +47,7 @@
                   </excludes>
                 </filter>
               </filters>
-              <minimizeJar>false</minimizeJar>
+              <minimizeJar>true</minimizeJar>
             </configuration>
           </execution>
         </executions>
@@ -67,12 +67,37 @@
   </repositories>
   <dependencies>
     <dependency>
-      <groupId>com.github.ben-manes.caffeine</groupId>
-      <artifactId>caffeine</artifactId>
-      <version>2.6.2</version>
+      <groupId>ninja.egg82.lib</groupId>
+      <artifactId>threading-lib</artifactId>
+      <version>1.0.3</version>
+    </dependency>
+    <dependency>
+      <groupId>ninja.egg82.lib</groupId>
+      <artifactId>collections-lib</artifactId>
+      <version>1.2.2</version>
+    </dependency>
+    <dependency>
+      <groupId>ninja.egg82.lib</groupId>
+      <artifactId>crypto-lib</artifactId>
+      <version>1.1.7</version>
+    </dependency>
+    <dependency>
+      <groupId>com.rollbar</groupId>
+      <artifactId>rollbar</artifactId>
+      <version>0.5.4</version>
+    </dependency>
+    <dependency>
+      <groupId>com.googlecode.json-simple</groupId>
+      <artifactId>json-simple</artifactId>
+      <version>1.1.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>25.1-jre</version>
     </dependency>
   </dependencies>
-  <description>Small library for design patterns regarding services</description>
+  <description>Library that allows easy sending of analytics/errors to various services</description>
   <url>https://www.egg82.ninja</url>
   <groupId>ninja.egg82.lib</groupId>
 </project>

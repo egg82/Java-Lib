@@ -21,7 +21,7 @@
     <module>SQL-Lib</module>
 	<module>Extended-SQL-Lib</module>
     <module>Crypto-Lib</module>
-	<module>Exception-Lib</module>
+	<module>Analytics-Lib</module>
 	<module>FSM-Lib</module>
 	<module>Lang-Lib</module>
   </modules>
