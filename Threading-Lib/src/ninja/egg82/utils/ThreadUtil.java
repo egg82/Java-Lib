@@ -3,12 +3,15 @@ package ninja.egg82.utils;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -34,6 +37,8 @@ public class ThreadUtil {
 
     // Lock to prevent multiple simultaneous shutdowns/restarts/etc
     private static Lock objLock = new ReentrantLock();
+    // Lock to prevent submitting of new runnables while pools are shut down
+    private static ReadWriteLock threadLock = new ReentrantReadWriteLock();
 
     // constructor
     public ThreadUtil() {
@@ -48,18 +53,30 @@ public class ThreadUtil {
      * @param runnable The task to run
      * @return The future
      */
-    public static Future<?> submit(Runnable runnable) {
-        return dynamicPool.submit(new Runnable() {
+    public static Future<?> submit(Runnable runnable) throws RejectedExecutionException {
+        threadLock.readLock().lock();
+
+        if (dynamicPool.isShutdown()) {
+            throw new RejectedExecutionException("pool is shut down.");
+        }
+
+        Future<?> retVal = dynamicPool.submit(new Runnable() {
             public void run() {
                 // If the task throws an exception the pool will kill the thread
                 try {
                     runnable.run();
+                } catch (RejectedExecutionException ex) {
+                    // Ignored
                 } catch (Exception ex) {
                     // Log the error, at least
                     logger.log(Level.SEVERE, "Could not run scheduled task.", ex);
                 }
             }
         });
+
+        threadLock.readLock().unlock();
+
+        return retVal;
     }
     /**
      * Submit a new (infinitely-running) task to be run once
@@ -67,18 +84,30 @@ public class ThreadUtil {
      * @param runnable The infinitely-running task to run
      * @return The future
      */
-    public static Future<?> submitInfinite(Runnable runnable) {
-        return infiniteDynamicPool.submit(new Runnable() {
+    public static Future<?> submitInfinite(Runnable runnable) throws RejectedExecutionException {
+        threadLock.readLock().lock();
+
+        if (infiniteDynamicPool.isShutdown()) {
+            throw new RejectedExecutionException("pool is shut down.");
+        }
+
+        Future<?> retVal = infiniteDynamicPool.submit(new Runnable() {
             public void run() {
                 // If the task throws an exception the pool will kill the thread
                 try {
                     runnable.run();
+                } catch (RejectedExecutionException ex) {
+                    // Ignored
                 } catch (Exception ex) {
                     // Log the error, at least
                     logger.log(Level.SEVERE, "Could not run scheduled task.", ex);
                 }
             }
         });
+
+        threadLock.readLock().unlock();
+
+        return retVal;
     }
 
     /**
@@ -88,18 +117,30 @@ public class ThreadUtil {
      * @param delayMillis The delay before running the task, in milliseconds
      * @return The scheduled future
      */
-    public static ScheduledFuture<?> schedule(Runnable runnable, long delayMillis) {
-        return scheduledPool.schedule(new Runnable() {
+    public static ScheduledFuture<?> schedule(Runnable runnable, long delayMillis) throws RejectedExecutionException {
+        threadLock.readLock().lock();
+
+        if (scheduledPool.isShutdown()) {
+            throw new RejectedExecutionException("pool is shut down.");
+        }
+
+        ScheduledFuture<?> retVal = scheduledPool.schedule(new Runnable() {
             public void run() {
                 // If the task throws an exception the pool will kill the thread
                 try {
                     runnable.run();
+                } catch (RejectedExecutionException ex) {
+                    // Ignored
                 } catch (Exception ex) {
                     // Log the error, at least
                     logger.log(Level.SEVERE, "Could not run scheduled task.", ex);
                 }
             }
         }, delayMillis, TimeUnit.MILLISECONDS);
+
+        threadLock.readLock().unlock();
+
+        return retVal;
     }
     /**
      * Schedule a new (infinitely-running) task to be run after a delay
@@ -108,18 +149,30 @@ public class ThreadUtil {
      * @param delayMillis The delay before running the task, in milliseconds
      * @return The scheduled future
      */
-    public static ScheduledFuture<?> scheduleInfinite(Runnable runnable, long delayMillis) {
-        return infiniteScheduledPool.schedule(new Runnable() {
+    public static ScheduledFuture<?> scheduleInfinite(Runnable runnable, long delayMillis) throws RejectedExecutionException {
+        threadLock.readLock().lock();
+
+        if (infiniteScheduledPool.isShutdown()) {
+            throw new RejectedExecutionException("pool is shut down.");
+        }
+
+        ScheduledFuture<?> retVal = infiniteScheduledPool.schedule(new Runnable() {
             public void run() {
                 // If the task throws an exception the pool will kill the thread
                 try {
                     runnable.run();
+                } catch (RejectedExecutionException ex) {
+                    // Ignored
                 } catch (Exception ex) {
                     // Log the error, at least
                     logger.log(Level.SEVERE, "Could not run scheduled task.", ex);
                 }
             }
         }, delayMillis, TimeUnit.MILLISECONDS);
+
+        threadLock.readLock().unlock();
+
+        return retVal;
     }
 
     /**
@@ -129,19 +182,29 @@ public class ThreadUtil {
      */
     public static void rename(String newName) {
         objLock.lock();
+        threadLock.writeLock().lock();
 
         try {
-            dynamicPool.setThreadFactory(new ThreadFactoryBuilder().setNameFormat(newName + "-dynamic-%d").build());
+            if (dynamicPool.isShutdown()) {
+                dynamicPool = createDynamicPool(new ThreadFactoryBuilder().setNameFormat(newName + "-dynamic-%d").build());
+            } else {
+                dynamicPool.setThreadFactory(new ThreadFactoryBuilder().setNameFormat(newName + "-dynamic-%d").build());
+            }
             infiniteDynamicPool.shutdownNow();
             infiniteDynamicFactory = new ThreadFactoryBuilder().setNameFormat(newName + "-infinite-dynamic-%d").build();
             infiniteDynamicPool = Executors.newCachedThreadPool(infiniteDynamicFactory);
-            scheduledPool.setThreadFactory(new ThreadFactoryBuilder().setNameFormat(newName + "-scheduled-%d").build());
+            if (scheduledPool.isShutdown()) {
+                scheduledPool = createScheduledPool(new ThreadFactoryBuilder().setNameFormat(newName + "-scheduled-%d").build());
+            } else {
+                scheduledPool.setThreadFactory(new ThreadFactoryBuilder().setNameFormat(newName + "-scheduled-%d").build());
+            }
             infiniteScheduledPool.shutdownNow();
             infiniteScheduledFactory = new ThreadFactoryBuilder().setNameFormat(newName + "-infinite-scheduled-%d").build();
             infiniteScheduledPool = Executors.newScheduledThreadPool(0, infiniteScheduledFactory);
         } catch (Exception ex) {
             logger.log(Level.WARNING, "Could not rename thread pools.", ex);
         } finally {
+            threadLock.writeLock().unlock();
             objLock.unlock();
         }
     }
@@ -154,11 +217,13 @@ public class ThreadUtil {
      */
     public static void shutdown(long waitMillis) {
         objLock.lock();
+        threadLock.writeLock().lock();
         try {
             internalShutdown(waitMillis);
         } catch (Exception ex) {
             logger.log(Level.WARNING, "Could not shutdown thread pools.", ex);
         } finally {
+            threadLock.writeLock().unlock();
             objLock.unlock();
         }
     }
@@ -171,6 +236,7 @@ public class ThreadUtil {
      */
     public static void restart(long shutdownWaitMillis) {
         objLock.lock();
+        threadLock.writeLock().lock();
 
         try {
             if ((dynamicPool != null && !dynamicPool.isShutdown()) || (infiniteDynamicPool != null && !infiniteDynamicPool.isShutdown()) || (scheduledPool != null && !scheduledPool.isShutdown())
@@ -185,6 +251,7 @@ public class ThreadUtil {
         } catch (Exception ex) {
             logger.log(Level.WARNING, "Could not restart thread pools.", ex);
         } finally {
+            threadLock.writeLock().unlock();
             objLock.unlock();
         }
     }
