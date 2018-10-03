@@ -1,0 +1,9 @@
+language: java
+dist: trusty
+addons:
+  sonarcloud:
+    organization: 'egg82-github'
+    token:
+      secure: "hYZ74pxyoYYR8qkeU9qvVVCV9W6ImVFXPZVHZ/8eLcL6/g5ktTVgBUr7ExeGVTG8G7o6rPADTp2Y3ouQW4B4BKWqNIaKKHq9Ac51/nylQT3cRYwm1y+xmbcFOx2U1ngqLdAcWWsoku/MdR/fTIlEUeh6o2m7u3w0MkcU5mfrqTKiNF8U5wihWcBK+MNooT4aGebsvbVdneGGepiO4JciePpZgxS+o++pUiJBGjRHmFF+t+2qRX33u2P260f3njkRoEDqcuj57WrBSA+JFI5xMEwCFDlzqs4wbTP64FObthoBvc6325bVU1kpg0ToOQDNx2hM4PyYZ7DNpHyYJ2+meMvzHKqEudUy6r01dZExKqTp33gKylRmIZsJF8USuSaxKlFA88izEMC3yp1irhPzvJ/qauBKUHT+ZdZMKUpJgIaFLEd7NfTFDZ4XDGqwQzVgE83y6lW+3O0QZs7xpkxqqjTvGEpmjfkrljLFw3UGJKNvoIhGvPe7nHs2ce7iQ4ZQpYtET79+raji1CrNdRQFX65Rr0P1sv+SZcd4VHJYxNbHHkzKdxVe8+1DAqf0LRaXBbh5Dv4lOg/cA8Nhb7jLRPcbR5tipHXtnWqcv1ukODIIyltee2b2Cp96x9oiu/5g3SZR80SE+2F1gSwBLR58oQE5LTctAFXrPJmuefANygI="
+script:
+  - mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent install sonar:sonar
